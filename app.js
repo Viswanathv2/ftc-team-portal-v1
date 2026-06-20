@@ -23,8 +23,8 @@ const DEFAULT_NAV_ITEMS = [
 ];
 
 // Replace these with your Supabase project URL and anon public key.
-const SUPABASE_URL = "https://YOUR-PROJECT-ID.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://hurchbtvwjrdxovkswjd.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_tZEFxppT7q0kC0JpJo_wYw_-WIKPJCm";
 
 const loginView = document.getElementById("loginView");
 const appView = document.getElementById("appView");
