@@ -18,20 +18,31 @@
         <h1>FTC Team Portal</h1>
         <p class="subtitle">Sign in to see your team dashboard.</p>
 
+        <div class="auth-switch" role="tablist" aria-label="Choose authentication mode">
+          <button id="modeLoginBtn" class="auth-tab active" type="button">Log In</button>
+          <button id="modeRegisterBtn" class="auth-tab" type="button">Register</button>
+        </div>
+
         <form id="loginForm" class="login-form">
-          <label for="username">Username</label>
-          <input id="username" name="username" type="text" placeholder="Example: driver1" required />
+          <div id="displayNameWrap" class="hidden">
+            <label for="displayName">Display Name</label>
+            <input id="displayName" name="displayName" type="text" placeholder="Example: Driver 1" />
+          </div>
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="student@example.com" required />
 
           <label for="password">Password</label>
           <input id="password" name="password" type="password" placeholder="Enter your password" required />
 
-          <button type="submit">Log In</button>
+          <button id="submitBtn" type="submit">Log In</button>
           <p id="loginError" class="error" aria-live="polite"></p>
+          <p id="loginSuccess" class="success" aria-live="polite"></p>
         </form>
 
         <details class="helper-box">
-          <summary>Need test credentials?</summary>
-          <p>Default demo login: <strong>driver1</strong> / <strong>goFTC</strong></p>
+          <summary>First time setup hint</summary>
+          <p>Create an account with Register. Then switch to Log In and use the same email/password.</p>
         </details>
       </div>
     </section>
@@ -42,6 +53,7 @@
         <nav>
           <ul id="navList"></ul>
         </nav>
+        <button id="coachAdminBtn" class="coach-admin-btn hidden" type="button">Coach Admin</button>
         <button id="logoutBtn" class="logout-btn">Log Out</button>
       </aside>
 
@@ -55,6 +67,7 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </body>
 </html>
