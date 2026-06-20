@@ -90,8 +90,15 @@ function setSubmitEnabled(enabled) {
 }
 
 function isRateLimitError(error) {
+  const status = Number(error?.status || 0);
+  const code = String(error?.code || "").toLowerCase();
   const message = String(error?.message || "").toLowerCase();
-  return message.includes("rate limit") || message.includes("too many requests");
+  return (
+    status === 429 ||
+    code.includes("rate_limit") ||
+    message.includes("email rate limit") ||
+    message.includes("rate limit exceeded")
+  );
 }
 
 function getDefaultSubmitText() {
@@ -132,7 +139,21 @@ function setCooldownMessage(remainingSeconds) {
   loginSuccess.textContent = "You can try again now.";
 }
 
+function isCooldownActiveForCurrentMode() {
+  return Date.now() < authCooldownUntil && authMode === authCooldownMode;
+}
+
 function updateCooldownUi() {
+  if (Date.now() < authCooldownUntil && authMode !== authCooldownMode) {
+    submitBtn.textContent = getDefaultSubmitText();
+    if (!isSubmitInFlight) {
+      setSubmitEnabled(true);
+    }
+    clearMessages();
+    setRetryButtonVisible(false);
+    return;
+  }
+
   const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
   if (remainingSeconds <= 0) {
     authCooldownUntil = 0;
@@ -416,7 +437,7 @@ async function onSubmit(event) {
   event.preventDefault();
   clearMessages();
 
-  if (Date.now() < authCooldownUntil) {
+  if (isCooldownActiveForCurrentMode()) {
     const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
     setCooldownMessage(remainingSeconds);
     updateCooldownUi();
@@ -508,7 +529,7 @@ logoutBtn.addEventListener("click", onLogout);
 coachAdminBtn.addEventListener("click", renderCoachAdmin);
 retryBtn.addEventListener("click", () => {
   clearMessages();
-  if (Date.now() < authCooldownUntil) {
+  if (isCooldownActiveForCurrentMode()) {
     updateCooldownUi();
     return;
   }
