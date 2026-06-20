@@ -25,7 +25,8 @@ const DEFAULT_NAV_ITEMS = [
 // Replace these with your Supabase project URL and anon public key.
 const SUPABASE_URL = "https://hurchbtvwjrdxovkswjd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZEFxppT7q0kC0JpJo_wYw_-WIKPJCm";
-const AUTH_RETRY_COOLDOWN_SECONDS = 45;
+const AUTH_REGISTER_COOLDOWN_SECONDS = 45;
+const AUTH_LOGIN_COOLDOWN_SECONDS = 10;
 
 const loginView = document.getElementById("loginView");
 const appView = document.getElementById("appView");
@@ -41,6 +42,7 @@ const coachAdminBtn = document.getElementById("coachAdminBtn");
 const modeLoginBtn = document.getElementById("modeLoginBtn");
 const modeRegisterBtn = document.getElementById("modeRegisterBtn");
 const submitBtn = document.getElementById("submitBtn");
+const retryBtn = document.getElementById("retryBtn");
 const displayNameWrap = document.getElementById("displayNameWrap");
 const displayNameInput = document.getElementById("displayName");
 
@@ -51,6 +53,7 @@ let selectedMenuId = DEFAULT_NAV_ITEMS[0].id;
 let currentUser = null;
 let currentProfile = { displayName: "Member", isCoach: false };
 let authCooldownUntil = 0;
+let authCooldownMode = "login";
 let cooldownIntervalId = null;
 let isSubmitInFlight = false;
 
@@ -76,8 +79,8 @@ function setMode(mode) {
   displayNameWrap.classList.toggle("hidden", !isRegister);
   displayNameInput.required = isRegister;
   submitBtn.textContent = isRegister ? "Create Account" : "Log In";
-  updateCooldownUi();
   clearMessages();
+  updateCooldownUi();
 }
 
 function setSubmitEnabled(enabled) {
@@ -95,6 +98,40 @@ function getDefaultSubmitText() {
   return authMode === "register" ? "Create Account" : "Log In";
 }
 
+function getCooldownSecondsForMode(mode) {
+  return mode === "register"
+    ? AUTH_REGISTER_COOLDOWN_SECONDS
+    : AUTH_LOGIN_COOLDOWN_SECONDS;
+}
+
+function setRetryButtonVisible(visible) {
+  retryBtn.classList.toggle("hidden", !visible);
+}
+
+function updateRetryButton(remainingSeconds) {
+  setRetryButtonVisible(true);
+
+  if (remainingSeconds > 0) {
+    retryBtn.disabled = true;
+    retryBtn.textContent = `Try again in ${remainingSeconds}s`;
+    return;
+  }
+
+  retryBtn.disabled = false;
+  retryBtn.textContent = "Try Again";
+}
+
+function setCooldownMessage(remainingSeconds) {
+  if (remainingSeconds > 0) {
+    loginSuccess.textContent = "";
+    loginError.textContent = `Too many attempts in ${authCooldownMode} mode. Please wait ${remainingSeconds} seconds.`;
+    return;
+  }
+
+  loginError.textContent = "";
+  loginSuccess.textContent = "You can try again now.";
+}
+
 function updateCooldownUi() {
   const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
   if (remainingSeconds <= 0) {
@@ -103,6 +140,8 @@ function updateCooldownUi() {
     if (!isSubmitInFlight) {
       setSubmitEnabled(true);
     }
+    updateRetryButton(0);
+    setCooldownMessage(0);
     if (cooldownIntervalId) {
       clearInterval(cooldownIntervalId);
       cooldownIntervalId = null;
@@ -112,9 +151,13 @@ function updateCooldownUi() {
 
   setSubmitEnabled(false);
   submitBtn.textContent = `Wait ${remainingSeconds}s`;
+  updateRetryButton(remainingSeconds);
+  setCooldownMessage(remainingSeconds);
 }
 
-function startAuthCooldown(seconds) {
+function startAuthCooldown(mode) {
+  const seconds = getCooldownSecondsForMode(mode);
+  authCooldownMode = mode;
   authCooldownUntil = Date.now() + seconds * 1000;
   updateCooldownUi();
 
@@ -375,7 +418,7 @@ async function onSubmit(event) {
 
   if (Date.now() < authCooldownUntil) {
     const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
-    loginError.textContent = `Please wait ${remainingSeconds} seconds before trying again.`;
+    setCooldownMessage(remainingSeconds);
     updateCooldownUi();
     return;
   }
@@ -416,8 +459,7 @@ async function onSubmit(event) {
     loginError.textContent = error.message || "Something went wrong. Please try again.";
 
     if (isRateLimitError(error)) {
-      startAuthCooldown(AUTH_RETRY_COOLDOWN_SECONDS);
-      loginError.textContent = `Too many attempts. Please wait ${AUTH_RETRY_COOLDOWN_SECONDS} seconds and try again.`;
+      startAuthCooldown(authMode);
     }
   } finally {
     isSubmitInFlight = false;
@@ -464,7 +506,19 @@ modeRegisterBtn.addEventListener("click", () => setMode("register"));
 loginForm.addEventListener("submit", onSubmit);
 logoutBtn.addEventListener("click", onLogout);
 coachAdminBtn.addEventListener("click", renderCoachAdmin);
+retryBtn.addEventListener("click", () => {
+  clearMessages();
+  if (Date.now() < authCooldownUntil) {
+    updateCooldownUi();
+    return;
+  }
+
+  setSubmitEnabled(true);
+  submitBtn.textContent = getDefaultSubmitText();
+  setRetryButtonVisible(false);
+});
 
 setMode("login");
+setRetryButtonVisible(false);
 initSupabase();
 restoreSession();
