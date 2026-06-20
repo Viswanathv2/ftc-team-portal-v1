@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FTC Team Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="background-art" aria-hidden="true"></div>
+
+  <main>
+    <section id="loginView" class="center-shell">
+      <div class="login-card">
+        <h1>FTC Team Portal</h1>
+        <p class="subtitle">Sign in to see your team dashboard.</p>
+
+        <form id="loginForm" class="login-form">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" placeholder="Example: driver1" required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Enter your password" required />
+
+          <button type="submit">Log In</button>
+          <p id="loginError" class="error" aria-live="polite"></p>
+        </form>
+
+        <details class="helper-box">
+          <summary>Need test credentials?</summary>
+          <p>Default demo login: <strong>driver1</strong> / <strong>goFTC</strong></p>
+        </details>
+      </div>
+    </section>
+
+    <section id="appView" class="app-shell hidden">
+      <aside class="sidebar">
+        <h2>Team Menu</h2>
+        <nav>
+          <ul id="navList"></ul>
+        </nav>
+        <button id="logoutBtn" class="logout-btn">Log Out</button>
+      </aside>
+
+      <section class="content">
+        <header>
+          <h1 id="welcomeText">Welcome</h1>
+          <p id="contentSubtitle">Pick an item from the left menu.</p>
+        </header>
+        <article id="contentArea" class="content-card"></article>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
