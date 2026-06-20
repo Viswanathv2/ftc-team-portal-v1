@@ -25,6 +25,7 @@ const DEFAULT_NAV_ITEMS = [
 // Replace these with your Supabase project URL and anon public key.
 const SUPABASE_URL = "https://hurchbtvwjrdxovkswjd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZEFxppT7q0kC0JpJo_wYw_-WIKPJCm";
+const AUTH_RETRY_COOLDOWN_SECONDS = 45;
 
 const loginView = document.getElementById("loginView");
 const appView = document.getElementById("appView");
@@ -49,6 +50,9 @@ let navItems = [...DEFAULT_NAV_ITEMS];
 let selectedMenuId = DEFAULT_NAV_ITEMS[0].id;
 let currentUser = null;
 let currentProfile = { displayName: "Member", isCoach: false };
+let authCooldownUntil = 0;
+let cooldownIntervalId = null;
+let isSubmitInFlight = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -72,7 +76,53 @@ function setMode(mode) {
   displayNameWrap.classList.toggle("hidden", !isRegister);
   displayNameInput.required = isRegister;
   submitBtn.textContent = isRegister ? "Create Account" : "Log In";
+  updateCooldownUi();
   clearMessages();
+}
+
+function setSubmitEnabled(enabled) {
+  submitBtn.disabled = !enabled;
+  submitBtn.style.opacity = enabled ? "1" : "0.7";
+  submitBtn.style.cursor = enabled ? "pointer" : "not-allowed";
+}
+
+function isRateLimitError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return message.includes("rate limit") || message.includes("too many requests");
+}
+
+function getDefaultSubmitText() {
+  return authMode === "register" ? "Create Account" : "Log In";
+}
+
+function updateCooldownUi() {
+  const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
+  if (remainingSeconds <= 0) {
+    authCooldownUntil = 0;
+    submitBtn.textContent = getDefaultSubmitText();
+    if (!isSubmitInFlight) {
+      setSubmitEnabled(true);
+    }
+    if (cooldownIntervalId) {
+      clearInterval(cooldownIntervalId);
+      cooldownIntervalId = null;
+    }
+    return;
+  }
+
+  setSubmitEnabled(false);
+  submitBtn.textContent = `Wait ${remainingSeconds}s`;
+}
+
+function startAuthCooldown(seconds) {
+  authCooldownUntil = Date.now() + seconds * 1000;
+  updateCooldownUi();
+
+  if (cooldownIntervalId) {
+    clearInterval(cooldownIntervalId);
+  }
+
+  cooldownIntervalId = setInterval(updateCooldownUi, 1000);
 }
 
 function setCoachAdminButtonVisible(isCoach) {
@@ -323,6 +373,20 @@ async function onSubmit(event) {
   event.preventDefault();
   clearMessages();
 
+  if (Date.now() < authCooldownUntil) {
+    const remainingSeconds = Math.ceil((authCooldownUntil - Date.now()) / 1000);
+    loginError.textContent = `Please wait ${remainingSeconds} seconds before trying again.`;
+    updateCooldownUi();
+    return;
+  }
+
+  if (isSubmitInFlight) {
+    return;
+  }
+
+  isSubmitInFlight = true;
+  setSubmitEnabled(false);
+
   const formData = new FormData(loginForm);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
@@ -330,6 +394,8 @@ async function onSubmit(event) {
 
   if (!supabaseClient) {
     loginError.textContent = "Supabase is not configured yet. See README setup steps.";
+    isSubmitInFlight = false;
+    setSubmitEnabled(true);
     return;
   }
 
@@ -348,6 +414,19 @@ async function onSubmit(event) {
     showApp(currentProfile.displayName, currentProfile.isCoach);
   } catch (error) {
     loginError.textContent = error.message || "Something went wrong. Please try again.";
+
+    if (isRateLimitError(error)) {
+      startAuthCooldown(AUTH_RETRY_COOLDOWN_SECONDS);
+      loginError.textContent = `Too many attempts. Please wait ${AUTH_RETRY_COOLDOWN_SECONDS} seconds and try again.`;
+    }
+  } finally {
+    isSubmitInFlight = false;
+    if (Date.now() < authCooldownUntil) {
+      updateCooldownUi();
+    } else {
+      submitBtn.textContent = getDefaultSubmitText();
+      setSubmitEnabled(true);
+    }
   }
 }
 
