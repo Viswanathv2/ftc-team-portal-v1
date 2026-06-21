@@ -4,16 +4,61 @@ This is a beginner-friendly website for FTC team members.
 
 ## Features
 
-- Login and registration page
-- Left sidebar navigation after login
-- Coach Admin page for coach-only menu editing
-- Supabase free database persistence for user profiles and menu content
+- **Public Landing Page** - Team info visible to everyone (no login required)
+- **Login and Registration** - Optional login for personalized dashboard
+- **Left Sidebar Dashboard** - Team menu navigation after login
+- **Coach Admin Page** - Coach-only menu editing
+- **Supabase Free Database** - Persistence for user profiles and menu content
+- **Assets Folder** - Easy image management for team photos and sponsors
 
-## How to customize menu options
+## Site Flow
 
-Edit the `NAV_ITEMS` list in `app.js`.
+1. **Landing Page** (First view) - Team info, schedule, sponsors, team members
+2. **Login/Register** (Optional) - Click "Log In" or "Create Account"
+3. **Dashboard** (Post-login) - Personalized menu + coach admin features
+4. **Public Content** - All sections and images on landing page visible without login
 
-## Local run
+## How to Customize the Landing Page
+
+Edit `index.html` in the `<section id="landingView">` to update:
+- Team number and name
+- About section
+- Team members cards (add names, roles, photos)
+- Schedule and events
+- Sponsors
+- Resources/announcements
+
+## How to Add Images
+
+1. Place image files in `assets/images/` folder:
+   - `team-photo.jpg` - hero image
+   - `member1.jpg`, `member2.jpg`, etc. - team member photos
+   - `sponsor1.png`, `sponsor2.png`, etc. - sponsor logos
+
+2. Images display automatically if they exist. If an image is missing, a placeholder appears.
+
+## Sponsorship Section
+
+The landing page includes a professional **Sponsorship Opportunities** section that:
+- Explains why sponsors are important to your team
+- Lists benefits of sponsorship (robot building, training, competitions, mentorship)
+- Provides a downloadable PDF with detailed sponsorship information (`Need Sponsorship.pdf`)
+- Includes a contact area for interested sponsors
+
+### Customize the Sponsorship Section
+
+Edit the sponsorship section in `index.html` to update:
+- Coach email address
+- Team contact information
+- Sponsorship benefits (modify the bulleted list)
+
+The PDF link automatically downloads `Need Sponsorship.pdf` when clicked.
+
+## How to Customize Menu Options (Dashboard)
+
+Edit the `DEFAULT_NAV_ITEMS` list in `app.js` for the default menu items shown after login.
+
+## Local Run
 
 Because this is a static site, you can open `index.html` directly in a browser.
 
@@ -26,7 +71,7 @@ python -m http.server 5500
 
 Then open: `http://localhost:5500/team-portal/`
 
-## One-time setup for free persistence (Supabase)
+## One-time Setup for Free Persistence (Supabase)
 
 This app now uses:
 

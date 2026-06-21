@@ -13,8 +13,115 @@
   <div class="background-art" aria-hidden="true"></div>
 
   <main>
-    <section id="loginView" class="center-shell">
+    <!-- Public Landing Page -->
+    <section id="landingView" class="landing-page">
+      <header class="landing-header">
+        <h1>FTC Team Portal</h1>
+        <p class="landing-tagline">Welcome to our robotics team!</p>
+      </header>
+
+      <div class="landing-container">
+        <!-- Hero Section -->
+        <section class="landing-section hero-section">
+          <div class="hero-content">
+            <h2>About Our Team</h2>
+            <p>Replace this with your team's mission and introduction. Tell visitors who you are and what makes your team special!</p>
+            <p><strong>Team Number:</strong> Team-25795</p>
+            <p><strong>Team Name:</strong> Architechs</p>
+          </div>
+          <div class="hero-image">
+            <img src="assets/images/team-photo.jpg" alt="Team photo" class="hero-img" onerror="this.style.display='none'">
+            <p class="image-placeholder">Team Photo</p>
+          </div>
+        </section>
+
+        <!-- Team Members Section -->
+        <section class="landing-section">
+          <h2>Meet the Team</h2>
+          <div class="team-grid">
+            <div class="team-member-card">
+              <img src="assets/images/member1.jpg" alt="Team member" onerror="this.style.display='none'">
+              <h3>[Member Name]</h3>
+              <p>[Role/Position]</p>
+            </div>
+            <div class="team-member-card">
+              <img src="assets/images/member2.jpg" alt="Team member" onerror="this.style.display='none'">
+              <h3>[Member Name]</h3>
+              <p>[Role/Position]</p>
+            </div>
+            <div class="team-member-card">
+              <img src="assets/images/member3.jpg" alt="Team member" onerror="this.style.display='none'">
+              <h3>[Member Name]</h3>
+              <p>[Role/Position]</p>
+            </div>
+            <div class="team-member-card">
+              <img src="assets/images/member4.jpg" alt="Team member" onerror="this.style.display='none'">
+              <h3>[Member Name]</h3>
+              <p>[Role/Position]</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Schedule Section -->
+        <section class="landing-section">
+          <h2>Schedule & Events</h2>
+          <div class="content-box">
+            <p>📅 <strong>Meeting Schedule:</strong> [Add your meeting days/times]</p>
+            <p>🏆 <strong>Competitions:</strong> [Add upcoming competition dates]</p>
+            <p>🛠️ <strong>Build Sessions:</strong> [Add build session times]</p>
+          </div>
+        </section>
+
+        <!-- Sponsorship Opportunities Section -->
+        <section class="landing-section sponsorship-section">
+          <h2>Sponsorship Opportunities</h2>
+          <div class="sponsorship-content">
+            <p>Architechs is actively seeking sponsorship from local businesses and community organizations. Your support directly enables our young team members to compete, learn, and grow in FIRST Robotics.</p>
+            
+            <div class="sponsorship-benefits">
+              <h3>What Your Sponsorship Supports:</h3>
+              <ul>
+                <li>🤖 Robot design, building, and competition costs</li>
+                <li>📚 Educational resources and training materials</li>
+                <li>🏆 Travel and competition registration fees</li>
+                <li>💡 Mentorship and STEM learning opportunities</li>
+              </ul>
+            </div>
+
+            <div class="sponsorship-cta">
+              <p><strong>Interested in sponsoring our team?</strong></p>
+              <p>Learn more about sponsorship opportunities and how your business can make an impact. Check our detailed sponsorship information below:</p>
+              <a href="Need Sponsorship.pdf" class="download-btn" download>📄 View Sponsorship Details (PDF)</a>
+            </div>
+
+            <div class="sponsorship-contact">
+              <p><strong>Questions? Contact us:</strong></p>
+              <p>ftc25795@gmail.com</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Resources Section -->
+        <section class="landing-section">
+          <h2>Resources & Announcements</h2>
+          <div class="content-box">
+            <p>📚 Check back soon for team announcements, resources, and updates!</p>
+            <p>Login to your dashboard to see more personalized content and team materials.</p>
+          </div>
+        </section>
+
+        <!-- CTA Buttons -->
+        <section class="landing-cta">
+          <button id="goToLoginBtn" class="cta-button primary">Log In to Dashboard</button>
+          <button id="goToRegisterBtn" class="cta-button secondary">Create Account</button>
+        </section>
+      </div>
+    </section>
+
+    <!-- Login/Register View -->
+    <section id="loginView" class="center-shell hidden">
       <div class="login-card">
+        <button id="backToLandingBtn" class="back-button" type="button">← Back</button>
         <h1>FTC Team Portal</h1>
         <p class="subtitle">Sign in to see your team dashboard.</p>
 
@@ -48,6 +155,7 @@
       </div>
     </section>
 
+    <!-- Dashboard View (Post-Login) -->
     <section id="appView" class="app-shell hidden">
       <aside class="sidebar">
         <h2>Team Menu</h2>

@@ -269,6 +269,329 @@ textarea:focus {
   display: none;
 }
 
+/* Landing Page Styles */
+.landing-page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-header {
+  text-align: center;
+  padding: 40px 20px 20px;
+  animation: pop-in 0.5s ease;
+}
+
+.landing-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+}
+
+.landing-tagline {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.landing-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+  width: 100%;
+}
+
+.landing-section {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 6px 20px rgba(17, 50, 77, 0.1);
+  animation: pop-in 0.5s ease;
+}
+
+.landing-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+
+.hero-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.hero-content h2 {
+  font-size: 2rem;
+}
+
+.hero-content p {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+
+.hero-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, var(--bg-a), var(--bg-b));
+  border-radius: 12px;
+  min-height: 250px;
+  position: relative;
+}
+
+.hero-img {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 8px;
+}
+
+.image-placeholder {
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.team-member-card {
+  background: linear-gradient(135deg, var(--bg-b), #ffffff);
+  border: 2px solid #deedf9;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.team-member-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(58, 134, 255, 0.15);
+}
+
+.team-member-card img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.team-member-card h3 {
+  font-size: 1.1rem;
+  margin: 8px 0 4px;
+}
+
+.team-member-card p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.content-box {
+  background: linear-gradient(135deg, var(--bg-b), #ffffff);
+  border: 2px solid #deedf9;
+  border-radius: 12px;
+  padding: 18px;
+  line-height: 1.8;
+}
+
+.content-box p {
+  margin: 8px 0;
+  font-size: 1rem;
+}
+
+.sponsors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.sponsor-card {
+  background: linear-gradient(135deg, var(--bg-a), #fffbf0);
+  border: 2px solid #ffeedd;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.sponsor-card:hover {
+  transform: scale(1.05);
+}
+
+.sponsor-card img {
+  width: 100%;
+  max-height: 100px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
+.sponsor-card p {
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Sponsorship Section Styles */
+.sponsorship-section {
+  background: linear-gradient(135deg, #fff8f0, #fff5f0) !important;
+  border: 3px solid #ff9966 !important;
+}
+
+.sponsorship-content {
+  display: grid;
+  gap: 20px;
+}
+
+.sponsorship-content > p:first-of-type {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.sponsorship-benefits {
+  background: #ffffff;
+  border: 2px solid #ffe0cc;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.sponsorship-benefits h3 {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.sponsorship-benefits ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.sponsorship-benefits li {
+  padding: 8px 0;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.sponsorship-cta {
+  background: linear-gradient(135deg, #fff0e6, #ffe8d6);
+  border: 2px solid #ffcc99;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+}
+
+.sponsorship-cta p {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.sponsorship-cta p:first-child {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.download-btn {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--accent), #ff9e6d);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 123, 84, 0.3);
+}
+
+.sponsorship-contact {
+  background: #f0f8ff;
+  border: 2px solid #d3e5ff;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+
+.sponsorship-contact p {
+  margin: 8px 0;
+  color: var(--ink);
+}
+
+.sponsorship-contact p:first-child {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.landing-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 32px;
+}
+
+.cta-button {
+  padding: 14px 32px;
+  font-size: 1.1rem;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  min-width: 240px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cta-button.primary {
+  background: linear-gradient(90deg, var(--accent-2), #5ba3ff);
+  color: #fff;
+}
+
+.cta-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(58, 134, 255, 0.3);
+}
+
+.cta-button.secondary {
+  background: linear-gradient(90deg, var(--accent), #ff9e6d);
+  color: #fff;
+}
+
+.cta-button.secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 123, 84, 0.3);
+}
+
+.back-button {
+  background: #eef6ff;
+  color: var(--ink);
+  border: 2px solid #deedf9;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+
+.back-button:hover {
+  background: #e1efff;
+  border-color: var(--accent-2);
+}
+
 @keyframes pop-in {
   from {
     opacity: 0;
@@ -288,5 +611,25 @@ textarea:focus {
   .sidebar {
     border-right: none;
     border-bottom: 1px solid #dce9f2;
+  }
+
+  .landing-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .hero-section {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-section {
+    padding: 20px;
+  }
+
+  .team-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cta-button {
+    min-width: 200px;
   }
 }

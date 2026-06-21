@@ -30,6 +30,7 @@ const AUTH_LOGIN_COOLDOWN_SECONDS = 10;
 
 const loginView = document.getElementById("loginView");
 const appView = document.getElementById("appView");
+const landingView = document.getElementById("landingView");
 const loginForm = document.getElementById("loginForm");
 const loginError = document.getElementById("loginError");
 const loginSuccess = document.getElementById("loginSuccess");
@@ -45,6 +46,9 @@ const submitBtn = document.getElementById("submitBtn");
 const retryBtn = document.getElementById("retryBtn");
 const displayNameWrap = document.getElementById("displayNameWrap");
 const displayNameInput = document.getElementById("displayName");
+const goToLoginBtn = document.getElementById("goToLoginBtn");
+const goToRegisterBtn = document.getElementById("goToRegisterBtn");
+const backToLandingBtn = document.getElementById("backToLandingBtn");
 
 let authMode = "login";
 let supabaseClient = null;
@@ -233,15 +237,24 @@ function buildNav() {
 
 function showApp(displayName, isCoach) {
   welcomeText.textContent = `Welcome, ${displayName}`;
+  landingView.classList.add("hidden");
   loginView.classList.add("hidden");
   appView.classList.remove("hidden");
   setCoachAdminButtonVisible(isCoach);
   buildNav();
 }
 
-function showLogin() {
-  appView.classList.add("hidden");
+function showLogin(mode = "login") {
+  setMode(mode);
+  landingView.classList.add("hidden");
   loginView.classList.remove("hidden");
+  appView.classList.add("hidden");
+}
+
+function showLanding() {
+  landingView.classList.remove("hidden");
+  loginView.classList.add("hidden");
+  appView.classList.add("hidden");
 }
 
 function safeNameFromEmail(email) {
@@ -424,6 +437,7 @@ function renderCoachAdmin() {
 async function restoreSession() {
   const { data, error } = await supabaseClient.auth.getSession();
   if (error || !data.session?.user) {
+    showLanding();
     return;
   }
 
@@ -506,7 +520,7 @@ async function onLogout() {
   loginForm.reset();
   clearMessages();
   setMode("login");
-  showLogin();
+  showLanding();
 }
 
 function initSupabase() {
@@ -538,6 +552,11 @@ retryBtn.addEventListener("click", () => {
   submitBtn.textContent = getDefaultSubmitText();
   setRetryButtonVisible(false);
 });
+
+// Landing page navigation
+goToLoginBtn.addEventListener("click", () => showLogin("login"));
+goToRegisterBtn.addEventListener("click", () => showLogin("register"));
+backToLandingBtn.addEventListener("click", showLanding);
 
 setMode("login");
 setRetryButtonVisible(false);
