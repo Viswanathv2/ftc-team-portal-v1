@@ -13,20 +13,30 @@ This is a beginner-friendly website for FTC team members.
 
 ## Site Flow
 
-1. **Landing Page** (First view) - Team info, schedule, sponsors, team members
-2. **Login/Register** (Optional) - Click "Log In" or "Create Account"
-3. **Dashboard** (Post-login) - Personalized menu + coach admin features
-4. **Public Content** - All sections and images on landing page visible without login
+1. **Landing Page** (`index.html`) - Team intro and navigation links
+2. **Public Content Pages** - Separate pages for team story, team members, schedule, sponsorship, and resources
+3. **Login/Register Page** (`login.html`) - Authentication controls on a dedicated page
+4. **Dashboard** (Post-login) - Personalized menu + coach admin features
 
-## How to Customize the Landing Page
+## Public Pages Structure
 
-Edit `index.html` in the `<section id="landingView">` to update:
-- Team number and name
-- About section
-- Team members cards (add names, roles, photos)
-- Schedule and events
-- Sponsors
-- Resources/announcements
+- `index.html`: home page with intro + quick links
+- `about.html`: team story and journey
+- `team.html`: team member cards
+- `schedule.html`: meetings and events
+- `sponsorship.html`: sponsorship needed details + PDF download
+- `resources.html`: announcements and public resources
+- `login.html`: login/register + dashboard app shell
+
+## How to Customize Public Pages
+
+Edit each page directly to update its content:
+- `index.html` for intro and quick-link labels
+- `about.html` for mission and story
+- `team.html` for member names/roles/photos
+- `schedule.html` for date/time information
+- `sponsorship.html` for sponsorship pitch and contact
+- `resources.html` for announcements and links
 
 ## How to Add Images
 

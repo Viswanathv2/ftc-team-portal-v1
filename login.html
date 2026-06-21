@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | FTC Team Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="background-art" aria-hidden="true"></div>
+
+  <nav class="top-nav" aria-label="Main navigation">
+    <ul class="top-nav-list">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">Team Story</a></li>
+      <li><a href="team.html">Meet the Team</a></li>
+      <li><a href="schedule.html">Schedule</a></li>
+      <li><a href="sponsorship.html">Sponsorship Needed</a></li>
+      <li><a href="resources.html">Resources</a></li>
+      <li><a class="active" href="login.html">Login</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <section id="loginView" class="center-shell">
+      <div class="login-card">
+        <a href="index.html" id="backToLandingBtn" class="back-button">Back to Home</a>
+        <h1>FTC Team Portal</h1>
+        <p class="subtitle">Sign in to see your team dashboard.</p>
+
+        <div class="auth-switch" role="tablist" aria-label="Choose authentication mode">
+          <button id="modeLoginBtn" class="auth-tab active" type="button">Log In</button>
+          <button id="modeRegisterBtn" class="auth-tab" type="button">Register</button>
+        </div>
+
+        <form id="loginForm" class="login-form">
+          <div id="displayNameWrap" class="hidden">
+            <label for="displayName">Display Name</label>
+            <input id="displayName" name="displayName" type="text" placeholder="Example: Driver 1" />
+          </div>
+
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="student@example.com" required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Enter your password" required />
+
+          <button id="submitBtn" type="submit">Log In</button>
+          <p id="loginError" class="error" aria-live="polite"></p>
+          <p id="loginSuccess" class="success" aria-live="polite"></p>
+          <button id="retryBtn" class="retry-btn hidden" type="button">Try Again</button>
+        </form>
+
+        <details class="helper-box">
+          <summary>First time setup hint</summary>
+          <p>Create an account with Register. Then switch to Log In and use the same email/password.</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="appView" class="app-shell hidden">
+      <aside class="sidebar">
+        <h2>Team Menu</h2>
+        <nav>
+          <ul id="navList"></ul>
+        </nav>
+        <button id="coachAdminBtn" class="coach-admin-btn hidden" type="button">Coach Admin</button>
+        <button id="logoutBtn" class="logout-btn">Log Out</button>
+      </aside>
+
+      <section class="content">
+        <header>
+          <h1 id="welcomeText">Welcome</h1>
+          <p id="contentSubtitle">Pick an item from the left menu.</p>
+        </header>
+        <article id="contentArea" class="content-card"></article>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</body>
+</html>

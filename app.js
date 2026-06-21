@@ -71,11 +71,19 @@ function escapeHtml(value) {
 }
 
 function clearMessages() {
-  loginError.textContent = "";
-  loginSuccess.textContent = "";
+  if (loginError) {
+    loginError.textContent = "";
+  }
+  if (loginSuccess) {
+    loginSuccess.textContent = "";
+  }
 }
 
 function setMode(mode) {
+  if (!modeLoginBtn || !modeRegisterBtn || !displayNameWrap || !displayNameInput || !submitBtn) {
+    return;
+  }
+
   authMode = mode;
   const isRegister = mode === "register";
   modeLoginBtn.classList.toggle("active", !isRegister);
@@ -88,6 +96,10 @@ function setMode(mode) {
 }
 
 function setSubmitEnabled(enabled) {
+  if (!submitBtn) {
+    return;
+  }
+
   submitBtn.disabled = !enabled;
   submitBtn.style.opacity = enabled ? "1" : "0.7";
   submitBtn.style.cursor = enabled ? "pointer" : "not-allowed";
@@ -116,10 +128,18 @@ function getCooldownSecondsForMode(mode) {
 }
 
 function setRetryButtonVisible(visible) {
+  if (!retryBtn) {
+    return;
+  }
+
   retryBtn.classList.toggle("hidden", !visible);
 }
 
 function updateRetryButton(remainingSeconds) {
+  if (!retryBtn) {
+    return;
+  }
+
   setRetryButtonVisible(true);
 
   if (remainingSeconds > 0) {
@@ -133,6 +153,10 @@ function updateRetryButton(remainingSeconds) {
 }
 
 function setCooldownMessage(remainingSeconds) {
+  if (!loginError || !loginSuccess) {
+    return;
+  }
+
   if (remainingSeconds > 0) {
     loginSuccess.textContent = "";
     loginError.textContent = `Too many attempts in ${authCooldownMode} mode. Please wait ${remainingSeconds} seconds.`;
@@ -148,6 +172,10 @@ function isCooldownActiveForCurrentMode() {
 }
 
 function updateCooldownUi() {
+  if (!submitBtn) {
+    return;
+  }
+
   if (Date.now() < authCooldownUntil && authMode !== authCooldownMode) {
     submitBtn.textContent = getDefaultSubmitText();
     if (!isSubmitInFlight) {
@@ -194,15 +222,27 @@ function startAuthCooldown(mode) {
 }
 
 function setCoachAdminButtonVisible(isCoach) {
+  if (!coachAdminBtn) {
+    return;
+  }
+
   coachAdminBtn.classList.toggle("hidden", !isCoach);
 }
 
 function clearSelectionStyles() {
+  if (!navList || !coachAdminBtn) {
+    return;
+  }
+
   navList.querySelectorAll("button").forEach((btn) => btn.classList.remove("active"));
   coachAdminBtn.classList.remove("active");
 }
 
 function renderContent(itemId) {
+  if (!contentSubtitle || !contentArea || !navList) {
+    return;
+  }
+
   const item = navItems.find((x) => x.id === itemId) || navItems[0];
   if (!item) {
     return;
@@ -219,6 +259,10 @@ function renderContent(itemId) {
 }
 
 function buildNav() {
+  if (!navList) {
+    return;
+  }
+
   navList.innerHTML = "";
 
   navItems.forEach((item) => {
@@ -236,8 +280,14 @@ function buildNav() {
 }
 
 function showApp(displayName, isCoach) {
+  if (!welcomeText || !loginView || !appView) {
+    return;
+  }
+
   welcomeText.textContent = `Welcome, ${displayName}`;
-  landingView.classList.add("hidden");
+  if (landingView) {
+    landingView.classList.add("hidden");
+  }
   loginView.classList.add("hidden");
   appView.classList.remove("hidden");
   setCoachAdminButtonVisible(isCoach);
@@ -246,15 +296,30 @@ function showApp(displayName, isCoach) {
 
 function showLogin(mode = "login") {
   setMode(mode);
-  landingView.classList.add("hidden");
-  loginView.classList.remove("hidden");
-  appView.classList.add("hidden");
+  if (landingView) {
+    landingView.classList.add("hidden");
+  }
+  if (loginView) {
+    loginView.classList.remove("hidden");
+  }
+  if (appView) {
+    appView.classList.add("hidden");
+  }
 }
 
 function showLanding() {
-  landingView.classList.remove("hidden");
-  loginView.classList.add("hidden");
-  appView.classList.add("hidden");
+  if (landingView) {
+    landingView.classList.remove("hidden");
+    if (loginView) {
+      loginView.classList.add("hidden");
+    }
+    if (appView) {
+      appView.classList.add("hidden");
+    }
+    return;
+  }
+
+  showLogin("login");
 }
 
 function safeNameFromEmail(email) {
@@ -437,7 +502,7 @@ function renderCoachAdmin() {
 async function restoreSession() {
   const { data, error } = await supabaseClient.auth.getSession();
   if (error || !data.session?.user) {
-    showLanding();
+    showLogin("login");
     return;
   }
 
@@ -448,6 +513,10 @@ async function restoreSession() {
 }
 
 async function onSubmit(event) {
+  if (!loginForm || !loginError || !submitBtn) {
+    return;
+  }
+
   event.preventDefault();
   clearMessages();
 
@@ -508,7 +577,7 @@ async function onSubmit(event) {
 }
 
 async function onLogout() {
-  if (!supabaseClient) {
+  if (!supabaseClient || !loginForm) {
     return;
   }
 
@@ -520,7 +589,7 @@ async function onLogout() {
   loginForm.reset();
   clearMessages();
   setMode("login");
-  showLanding();
+  showLogin("login");
 }
 
 function initSupabase() {
@@ -529,36 +598,59 @@ function initSupabase() {
     SUPABASE_ANON_KEY.includes("YOUR_SUPABASE_ANON_KEY");
 
   if (hasPlaceholders || !window.supabase) {
-    loginError.textContent = "Set SUPABASE_URL and SUPABASE_ANON_KEY in app.js before using login.";
+    if (loginError) {
+      loginError.textContent = "Set SUPABASE_URL and SUPABASE_ANON_KEY in app.js before using login.";
+    }
     return;
   }
 
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-modeLoginBtn.addEventListener("click", () => setMode("login"));
-modeRegisterBtn.addEventListener("click", () => setMode("register"));
-loginForm.addEventListener("submit", onSubmit);
-logoutBtn.addEventListener("click", onLogout);
-coachAdminBtn.addEventListener("click", renderCoachAdmin);
-retryBtn.addEventListener("click", () => {
-  clearMessages();
-  if (isCooldownActiveForCurrentMode()) {
-    updateCooldownUi();
-    return;
-  }
+if (modeLoginBtn) {
+  modeLoginBtn.addEventListener("click", () => setMode("login"));
+}
+if (modeRegisterBtn) {
+  modeRegisterBtn.addEventListener("click", () => setMode("register"));
+}
+if (loginForm) {
+  loginForm.addEventListener("submit", onSubmit);
+}
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", onLogout);
+}
+if (coachAdminBtn) {
+  coachAdminBtn.addEventListener("click", renderCoachAdmin);
+}
+if (retryBtn) {
+  retryBtn.addEventListener("click", () => {
+    clearMessages();
+    if (isCooldownActiveForCurrentMode()) {
+      updateCooldownUi();
+      return;
+    }
 
-  setSubmitEnabled(true);
-  submitBtn.textContent = getDefaultSubmitText();
+    setSubmitEnabled(true);
+    if (submitBtn) {
+      submitBtn.textContent = getDefaultSubmitText();
+    }
+    setRetryButtonVisible(false);
+  });
+}
+
+if (goToLoginBtn) {
+  goToLoginBtn.addEventListener("click", () => showLogin("login"));
+}
+if (goToRegisterBtn) {
+  goToRegisterBtn.addEventListener("click", () => showLogin("register"));
+}
+if (backToLandingBtn) {
+  backToLandingBtn.addEventListener("click", showLanding);
+}
+
+if (loginForm) {
+  setMode("login");
   setRetryButtonVisible(false);
-});
-
-// Landing page navigation
-goToLoginBtn.addEventListener("click", () => showLogin("login"));
-goToRegisterBtn.addEventListener("click", () => showLogin("register"));
-backToLandingBtn.addEventListener("click", showLanding);
-
-setMode("login");
-setRetryButtonVisible(false);
-initSupabase();
-restoreSession();
+  initSupabase();
+  restoreSession();
+}
