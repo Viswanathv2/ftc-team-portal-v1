@@ -7,9 +7,14 @@ This is a beginner-friendly website for FTC team members.
 - **Public Landing Page** - Team info visible to everyone (no login required)
 - **Login and Registration** - Optional login for personalized dashboard
 - **Left Sidebar Dashboard** - Team menu navigation after login
-- **Coach Admin Page** - Coach-only menu editing
+- **Coach Admin** - Coaches can edit dashboard menu items and announcements
+- **Portal Admin** - Portal admins can customize landing page content
+- **Team Member Management** - Portal admins can add/remove team members and upload member images
+- **Feedback Section** - Visitors can submit feedback/comments on every public page
+- **Visit Analytics** - Portal admins can view page visit counts
 - **Supabase Free Database** - Persistence for user profiles and menu content
 - **Assets Folder** - Easy image management for team photos and sponsors
+- **Sponsorship Page** - Professional sponsorship levels with clickable email contact
 
 ## Site Flow
 
@@ -30,13 +35,15 @@ This is a beginner-friendly website for FTC team members.
 
 ## How to Customize Public Pages
 
-Edit each page directly to update its content:
-- `index.html` for intro and quick-link labels
-- `about.html` for mission and story
-- `team.html` for member names/roles/photos
-- `schedule.html` for date/time information
-- `sponsorship.html` for sponsorship pitch and contact
-- `resources.html` for announcements and links
+Use **Portal Admin** from the dashboard after login:
+- Edit team story, schedule, resources, and sponsorship page text
+- Add/remove team members
+- Upload team member images
+- Update sponsorship contact email
+- Review visitor feedback
+- Review page visit counts
+- Export feedback to `portal-feedback.csv`
+- Export visit analytics to `portal-visits.csv`
 
 ## How to Add Images
 
@@ -49,20 +56,24 @@ Edit each page directly to update its content:
 
 ## Sponsorship Section
 
-The landing page includes a professional **Sponsorship Opportunities** section that:
-- Explains why sponsors are important to your team
-- Lists benefits of sponsorship (robot building, training, competitions, mentorship)
-- Provides a downloadable PDF with detailed sponsorship information (`Need Sponsorship.pdf`)
-- Includes a contact area for interested sponsors
+The **Sponsorship Needed** page displays:
+- Team sponsorship needs and benefits
+- **Sponsorship Levels**:
+  - Platinum Sponsor ($2000+): Logo on robot, shirts, social media, portfolio & pit display, team event invitations
+  - Gold Sponsor ($1000+): Logo on pit display, social media recognition, team document acknowledgment
+  - Silver Sponsor ($500+): Social media recognition, materials listing
+  - Friends of the Team (any amount): Social media thank-you mention
+- Clickable email link to contact the team
+- Optional PDF download with full sponsorship details
 
-### Customize the Sponsorship Section
+### Customize the Sponsorship Contact Email
 
-Edit the sponsorship section in `index.html` to update:
-- Coach email address
-- Team contact information
-- Sponsorship benefits (modify the bulleted list)
+Edit `sponsorship.html` to update the email link:
+```html
+<a href="mailto:ftc25795@gmail.com" class="email-link">ftc25795@gmail.com</a>
+```
 
-The PDF link automatically downloads `Need Sponsorship.pdf` when clicked.
+Replace `ftc25795@gmail.com` with your team's email address. Clicking the email link will open the user's default email client.
 
 ## How to Customize Menu Options (Dashboard)
 
@@ -106,6 +117,7 @@ create table if not exists public.profiles (
 	user_id uuid primary key references auth.users(id) on delete cascade,
 	display_name text not null,
 	is_coach boolean not null default false,
+	is_portal_admin boolean not null default false,
 	created_at timestamp with time zone default now()
 );
 
@@ -170,6 +182,139 @@ values
 	('resources', 'Learning Resources', 'Put links to tutorial videos, docs, and checklists here.'),
 	('checklist', 'Competition Checklist', 'List what to pack before leaving: battery charger, spare parts, and notebook.')
 on conflict (id) do nothing;
+
+create table if not exists public.portal_pages (
+	slug text primary key,
+	title text not null,
+	subtitle text,
+	body text,
+	contact_email text,
+	updated_at timestamp with time zone default now()
+);
+
+alter table public.portal_pages enable row level security;
+
+create policy "Public can read portal pages"
+on public.portal_pages for select
+using (true);
+
+create policy "Portal admin can write portal pages"
+on public.portal_pages for all
+using (
+	exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+)
+with check (
+	exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+);
+
+create table if not exists public.team_members (
+	id uuid primary key default gen_random_uuid(),
+	name text not null,
+	role text,
+	image_url text,
+	sort_order int not null default 1,
+	is_active boolean not null default true,
+	created_at timestamp with time zone default now()
+);
+
+alter table public.team_members enable row level security;
+
+create policy "Public can read team members"
+on public.team_members for select
+using (true);
+
+create policy "Portal admin can write team members"
+on public.team_members for all
+using (
+	exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+)
+with check (
+	exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+);
+
+create table if not exists public.feedback (
+	id uuid primary key default gen_random_uuid(),
+	page_slug text not null,
+	name text not null,
+	email text,
+	comment text not null,
+	created_at timestamp with time zone default now()
+);
+
+alter table public.feedback enable row level security;
+
+create policy "Public can create feedback"
+on public.feedback for insert
+with check (true);
+
+create policy "Public can read feedback"
+on public.feedback for select
+using (true);
+
+create table if not exists public.page_visits (
+	id uuid primary key default gen_random_uuid(),
+	page_slug text not null,
+	visitor_id text not null,
+	visit_date date not null default current_date,
+	visited_at timestamp with time zone default now(),
+	constraint unique_visit unique (visitor_id, page_slug, visit_date)
+);
+
+alter table public.page_visits enable row level security;
+
+create policy "Public can insert page visits"
+on public.page_visits for insert
+with check (true);
+
+create policy "Authenticated users can read page visits"
+on public.page_visits for select
+using (auth.role() = 'authenticated');
+```
+
+### 2a. Create storage bucket for team member photos
+
+Run this in Supabase SQL editor:
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('team-assets', 'team-assets', true)
+on conflict (id) do nothing;
+
+create policy "Public can read team assets"
+on storage.objects for select
+using (bucket_id = 'team-assets');
+
+create policy "Portal admin can upload team assets"
+on storage.objects for insert
+with check (
+	bucket_id = 'team-assets'
+	and exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+);
+
+create policy "Portal admin can delete team assets"
+on storage.objects for delete
+using (
+	bucket_id = 'team-assets'
+	and exists (
+		select 1 from public.profiles p
+		where p.user_id = auth.uid() and p.is_portal_admin = true
+	)
+);
 ```
 
 ### 2b. Mark coach accounts
@@ -184,12 +329,29 @@ where p.user_id = u.id
   and u.email = 'coach@example.com';
 ```
 
+### 2c. Mark Portal Admin accounts
+
+A **Portal Admin** can customize landing page content (team intro, sponsorship email, etc.). After a Portal Admin registers, run this SQL (replace email):
+
+```sql
+update public.profiles p
+set is_portal_admin = true
+from auth.users u
+where p.user_id = u.id
+  and u.email = 'portaladmin@example.com';
+```
+
 ### 3. Set keys in app
 
 In `app.js`, replace:
 
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
+
+In `public.js`, replace:
+
+- `PUBLIC_SUPABASE_URL`
+- `PUBLIC_SUPABASE_ANON_KEY`
 
 with your real values.
 

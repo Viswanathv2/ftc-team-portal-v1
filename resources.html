@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body data-page="resources">
   <div class="background-art" aria-hidden="true"></div>
   <nav class="top-nav" aria-label="Main navigation">
     <ul class="top-nav-list">
@@ -19,19 +19,20 @@
       <li><a href="schedule.html">Schedule</a></li>
       <li><a href="sponsorship.html">Sponsorship Needed</a></li>
       <li><a class="active" href="resources.html">Resources</a></li>
+      <li><a href="feedback.html">Feedback</a></li>
       <li><a href="login.html">Login</a></li>
     </ul>
   </nav>
   <main>
     <section class="landing-page">
       <header class="landing-header">
-        <h1>Resources and Announcements</h1>
-        <p class="landing-tagline">Helpful materials for our team and visitors</p>
+        <h1 id="publicPageTitle">Resources and Announcements</h1>
+        <p id="publicPageSubtitle" class="landing-tagline">Helpful materials for our team and visitors</p>
       </header>
       <div class="landing-container">
         <section class="landing-section">
           <h2>Latest Updates</h2>
-          <div class="content-box">
+          <div id="publicPageBody" class="content-box">
             <p>Check back soon for team announcements, resources, and updates.</p>
             <p>Team members can log in to view dashboard content managed by coaches.</p>
           </div>
@@ -43,5 +44,8 @@
       </div>
     </section>
   </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="public.js"></script>
 </body>
 </html>

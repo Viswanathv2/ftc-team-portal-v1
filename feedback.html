@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feedback | FTC Team Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="feedback">
+  <div class="background-art" aria-hidden="true"></div>
+  <nav class="top-nav" aria-label="Main navigation">
+    <ul class="top-nav-list">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">Team Story</a></li>
+      <li><a href="team.html">Meet the Team</a></li>
+      <li><a href="schedule.html">Schedule</a></li>
+      <li><a href="sponsorship.html">Sponsorship Needed</a></li>
+      <li><a href="resources.html">Resources</a></li>
+      <li><a class="active" href="feedback.html">Feedback</a></li>
+      <li><a href="login.html">Login</a></li>
+    </ul>
+  </nav>
+  <main>
+    <section class="landing-page">
+      <header class="landing-header">
+        <h1>Feedback</h1>
+        <p class="landing-tagline">Share your thoughts about Team 25795 - Architechs</p>
+      </header>
+      <div class="landing-container">
+        <section class="landing-section">
+          <h2>Send Us Feedback</h2>
+          <p>We welcome feedback from team members, visitors, sponsors, and community members!</p>
+          <form id="feedbackForm" class="admin-form">
+            <label for="feedbackPage">Which page is this about?</label>
+            <select id="feedbackPage">
+              <option value="general">General / All Pages</option>
+              <option value="home">Home</option>
+              <option value="about">Team Story</option>
+              <option value="team">Meet the Team</option>
+              <option value="schedule">Schedule</option>
+              <option value="sponsorship">Sponsorship</option>
+              <option value="resources">Resources</option>
+            </select>
+            <label for="feedbackName">Your Name</label>
+            <input id="feedbackName" type="text" required placeholder="Your name" />
+            <label for="feedbackEmail">Email (optional)</label>
+            <input id="feedbackEmail" type="email" placeholder="your@email.com" />
+            <label for="feedbackComment">Your Feedback</label>
+            <textarea id="feedbackComment" required placeholder="Share your comments, suggestions, or encouragement…"></textarea>
+            <button type="submit" class="admin-save-btn">Send Feedback</button>
+            <p id="feedbackStatus" class="success" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="landing-section">
+          <h2>Recent Comments</h2>
+          <div id="feedbackList"><p>Loading feedback…</p></div>
+        </section>
+
+        <section class="landing-cta">
+          <a class="cta-button primary" href="index.html">Back to Home</a>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="public.js"></script>
+</body>
+</html>

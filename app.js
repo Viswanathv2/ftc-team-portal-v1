@@ -27,6 +27,52 @@ const SUPABASE_URL = "https://hurchbtvwjrdxovkswjd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_tZEFxppT7q0kC0JpJo_wYw_-WIKPJCm";
 const AUTH_REGISTER_COOLDOWN_SECONDS = 45;
 const AUTH_LOGIN_COOLDOWN_SECONDS = 10;
+const TEAM_ASSETS_BUCKET = "team-assets";
+const PORTAL_PAGE_DEFS = [
+  {
+    slug: "home",
+    label: "Home",
+    defaultTitle: "FTC Team Portal",
+    defaultSubtitle: "Welcome to Team 25795 - Architechs",
+    defaultBody: "We are Team 25795 Architechs from Mechanicsburg, Pennsylvania."
+  },
+  {
+    slug: "about",
+    label: "Team Story",
+    defaultTitle: "Our Journey",
+    defaultSubtitle: "How Architechs grew through robotics",
+    defaultBody: "Share your team story and milestones here."
+  },
+  {
+    slug: "team",
+    label: "Meet the Team",
+    defaultTitle: "Team Members",
+    defaultSubtitle: "Team 25795 - Architechs",
+    defaultBody: "Introduce your team members here."
+  },
+  {
+    slug: "schedule",
+    label: "Schedule",
+    defaultTitle: "Current Plan",
+    defaultSubtitle: "Upcoming plans for Team 25795",
+    defaultBody: "Add your meeting schedule, competitions, and build sessions."
+  },
+  {
+    slug: "resources",
+    label: "Resources",
+    defaultTitle: "Latest Updates",
+    defaultSubtitle: "Helpful materials for our team and visitors",
+    defaultBody: "Post announcements and learning resources here."
+  },
+  {
+    slug: "sponsorship",
+    label: "Sponsorship Needed",
+    defaultTitle: "Sponsorship Opportunities",
+    defaultSubtitle: "Partner with Team 25795 - Architechs",
+    defaultBody: "Architechs is actively seeking sponsorship from local businesses and community organizations.",
+    defaultContactEmail: "ftc25795@gmail.com"
+  }
+];
 
 const loginView = document.getElementById("loginView");
 const appView = document.getElementById("appView");
@@ -55,7 +101,7 @@ let supabaseClient = null;
 let navItems = [...DEFAULT_NAV_ITEMS];
 let selectedMenuId = DEFAULT_NAV_ITEMS[0].id;
 let currentUser = null;
-let currentProfile = { displayName: "Member", isCoach: false };
+let currentProfile = { displayName: "Member", isCoach: false, isPortalAdmin: false };
 let authCooldownUntil = 0;
 let authCooldownMode = "login";
 let cooldownIntervalId = null;
@@ -229,6 +275,15 @@ function setCoachAdminButtonVisible(isCoach) {
   coachAdminBtn.classList.toggle("hidden", !isCoach);
 }
 
+function setPortalAdminButtonVisible(isPortalAdmin) {
+  const portalAdminBtn = document.getElementById("portalAdminBtn");
+  if (!portalAdminBtn) {
+    return;
+  }
+
+  portalAdminBtn.classList.toggle("hidden", !isPortalAdmin);
+}
+
 function clearSelectionStyles() {
   if (!navList || !coachAdminBtn) {
     return;
@@ -236,6 +291,10 @@ function clearSelectionStyles() {
 
   navList.querySelectorAll("button").forEach((btn) => btn.classList.remove("active"));
   coachAdminBtn.classList.remove("active");
+  const portalAdminBtn = document.getElementById("portalAdminBtn");
+  if (portalAdminBtn) {
+    portalAdminBtn.classList.remove("active");
+  }
 }
 
 function renderContent(itemId) {
@@ -279,7 +338,7 @@ function buildNav() {
   renderContent(selectedMenuId);
 }
 
-function showApp(displayName, isCoach) {
+function showApp(displayName, isCoach, isPortalAdmin = false) {
   if (!welcomeText || !loginView || !appView) {
     return;
   }
@@ -291,6 +350,7 @@ function showApp(displayName, isCoach) {
   loginView.classList.add("hidden");
   appView.classList.remove("hidden");
   setCoachAdminButtonVisible(isCoach);
+  setPortalAdminButtonVisible(isPortalAdmin);
   buildNav();
 }
 
@@ -324,6 +384,154 @@ function showLanding() {
 
 function safeNameFromEmail(email) {
   return String(email || "Member").split("@")[0] || "Member";
+}
+
+function mapPortalPageRows(rows) {
+  const bySlug = new Map((rows || []).map((row) => [row.slug, row]));
+  return PORTAL_PAGE_DEFS.map((def) => {
+    const row = bySlug.get(def.slug) || {};
+    return {
+      slug: def.slug,
+      label: def.label,
+      title: row.title || def.defaultTitle,
+      subtitle: row.subtitle || def.defaultSubtitle,
+      body: row.body || def.defaultBody,
+      contactEmail: row.contact_email || def.defaultContactEmail || ""
+    };
+  });
+}
+
+async function loadPortalPages() {
+  const { data, error } = await supabaseClient
+    .from("portal_pages")
+    .select("slug,title,subtitle,body,contact_email");
+
+  if (error) {
+    return mapPortalPageRows([]);
+  }
+
+  return mapPortalPageRows(data);
+}
+
+async function savePortalPages(items) {
+  const payload = items.map((item) => ({
+    slug: item.slug,
+    title: item.title,
+    subtitle: item.subtitle,
+    body: item.body,
+    contact_email: item.contactEmail || null
+  }));
+
+  const { error } = await supabaseClient.from("portal_pages").upsert(payload, {
+    onConflict: "slug"
+  });
+
+  return error;
+}
+
+async function loadTeamMembers() {
+  const { data, error } = await supabaseClient
+    .from("team_members")
+    .select("id,name,role,image_url,sort_order")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return [];
+  }
+
+  return data || [];
+}
+
+async function uploadTeamMemberImage(file) {
+  if (!file) {
+    return null;
+  }
+
+  const fileName = `${Date.now()}-${String(file.name || "member").replace(/[^a-zA-Z0-9_.-]/g, "-")}`;
+  const filePath = `members/${fileName}`;
+  const { error } = await supabaseClient.storage
+    .from(TEAM_ASSETS_BUCKET)
+    .upload(filePath, file, { upsert: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const { data } = supabaseClient.storage.from(TEAM_ASSETS_BUCKET).getPublicUrl(filePath);
+  return data?.publicUrl || null;
+}
+
+async function createTeamMember(member) {
+  const { error } = await supabaseClient.from("team_members").insert(member);
+  return error;
+}
+
+async function deleteTeamMember(memberId) {
+  const { error } = await supabaseClient.from("team_members").delete().eq("id", memberId);
+  return error;
+}
+
+async function loadVisitSummary() {
+  const { data, error } = await supabaseClient
+    .from("page_visits")
+    .select("page_slug,visitor_id");
+
+  if (error) {
+    return [];
+  }
+
+  // Count unique visitor_ids per page
+  const uniqueVisitors = {};
+  (data || []).forEach((row) => {
+    const slug = row.page_slug || "unknown";
+    const vid = row.visitor_id || "anon";
+    if (!uniqueVisitors[slug]) {
+      uniqueVisitors[slug] = new Set();
+    }
+    uniqueVisitors[slug].add(vid);
+  });
+
+  return Object.entries(uniqueVisitors)
+    .sort((a, b) => b[1].size - a[1].size)
+    .map(([slug, visitors]) => ({ slug, count: visitors.size }));
+}
+
+async function loadFeedback() {
+  const { data, error } = await supabaseClient
+    .from("feedback")
+    .select("id,page_slug,name,email,comment,created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    return [];
+  }
+
+  return data || [];
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? "");
+  if (text.includes(",") || text.includes("\n") || text.includes('"')) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+  return text;
+}
+
+function downloadCsv(fileName, headers, rows) {
+  const headerLine = headers.map(escapeCsvCell).join(",");
+  const rowLines = rows.map((row) => row.map(escapeCsvCell).join(","));
+  const csvContent = [headerLine, ...rowLines].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function mergeMenuItemsFromDb(rows) {
@@ -362,20 +570,22 @@ async function loadMenuItems() {
 async function fetchProfile(user) {
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("display_name,is_coach")
+    .select("display_name,is_coach,is_portal_admin")
     .eq("user_id", user.id)
     .single();
 
   if (error || !data) {
     return {
       displayName: safeNameFromEmail(user.email),
-      isCoach: false
+      isCoach: false,
+      isPortalAdmin: false
     };
   }
 
   return {
     displayName: data.display_name || safeNameFromEmail(user.email),
-    isCoach: Boolean(data.is_coach)
+    isCoach: Boolean(data.is_coach),
+    isPortalAdmin: Boolean(data.is_portal_admin)
   };
 }
 
@@ -396,7 +606,8 @@ async function registerUser(email, password, displayName) {
   const { error: profileError } = await supabaseClient.from("profiles").upsert({
     user_id: data.user.id,
     display_name: displayName,
-    is_coach: false
+    is_coach: false,
+    is_portal_admin: false
   });
 
   if (profileError) {
@@ -499,6 +710,295 @@ function renderCoachAdmin() {
   });
 }
 
+function renderPortalAdmin(activeTab = "pages") {
+  if (!currentProfile.isPortalAdmin) {
+    return;
+  }
+
+  contentSubtitle.textContent = "Portal Admin";
+  clearSelectionStyles();
+
+  const portalAdminBtn = document.getElementById("portalAdminBtn");
+  if (portalAdminBtn) {
+    portalAdminBtn.classList.add("active");
+  }
+
+  contentArea.innerHTML = `
+    <h3>Portal Admin</h3>
+
+    <div class="portal-admin-tabs" role="tablist" aria-label="Admin sections">
+      <button class="portal-admin-tab${activeTab === "pages" ? " active" : ""}" data-tab="pages" type="button">Public Pages</button>
+      <button class="portal-admin-tab${activeTab === "members" ? " active" : ""}" data-tab="members" type="button">Team Members</button>
+      <button class="portal-admin-tab${activeTab === "insights" ? " active" : ""}" data-tab="insights" type="button">Portal Insights</button>
+    </div>
+
+    <!-- TAB: Public Pages -->
+    <div id="adminTab-pages" class="portal-admin-panel${activeTab === "pages" ? "" : " hidden"}">
+      <p>Edit the title, subtitle, and body text for each public page. Click a section to expand it.</p>
+      <form id="portalAdminForm" class="admin-form">
+        ${PORTAL_PAGE_DEFS.map((def) => `
+          <details class="admin-collapsible" id="collapse-${escapeHtml(def.slug)}">
+            <summary class="admin-collapsible-summary">${escapeHtml(def.label)}</summary>
+            <div class="admin-collapsible-body">
+              <label for="page-title-${escapeHtml(def.slug)}">Page Title</label>
+              <input id="page-title-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="title" value="${escapeHtml(def.defaultTitle)}" />
+              <label for="page-subtitle-${escapeHtml(def.slug)}">Subtitle</label>
+              <input id="page-subtitle-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="subtitle" value="${escapeHtml(def.defaultSubtitle)}" />
+              <label for="page-body-${escapeHtml(def.slug)}">Body Text</label>
+              <textarea id="page-body-${escapeHtml(def.slug)}" data-page="${escapeHtml(def.slug)}" data-field="body">${escapeHtml(def.defaultBody)}</textarea>
+              ${def.slug === "sponsorship" ? `
+                <label for="page-contact-${escapeHtml(def.slug)}">Contact Email</label>
+                <input id="page-contact-${escapeHtml(def.slug)}" type="email" data-page="${escapeHtml(def.slug)}" data-field="contactEmail" value="${escapeHtml(def.defaultContactEmail || "")}" />
+              ` : ""}
+            </div>
+          </details>
+        `).join("")}
+        <button type="submit" class="admin-save-btn">Save All Pages</button>
+        <p id="portalAdminStatus" class="success" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <!-- TAB: Team Members -->
+    <div id="adminTab-members" class="portal-admin-panel${activeTab === "members" ? "" : " hidden"}">
+      <details class="admin-collapsible" open>
+        <summary class="admin-collapsible-summary">Add New Team Member</summary>
+        <div class="admin-collapsible-body">
+          <form id="teamMemberForm" class="admin-form">
+            <label for="memberName">Name</label>
+            <input id="memberName" type="text" required placeholder="Member name" />
+            <label for="memberRole">Role</label>
+            <input id="memberRole" type="text" required placeholder="Driver / Programmer / Builder" />
+            <label for="memberSort">Sort Order (1 = first)</label>
+            <input id="memberSort" type="number" min="1" value="1" />
+            <label for="memberImage">Upload Photo</label>
+            <input id="memberImage" type="file" accept="image/*" />
+            <label for="memberImageUrl">Or paste Image URL</label>
+            <input id="memberImageUrl" type="url" placeholder="https://..." />
+            <button type="submit" class="admin-save-btn">Add Team Member</button>
+            <p id="teamMemberStatus" class="success" aria-live="polite"></p>
+          </form>
+        </div>
+      </details>
+      <details class="admin-collapsible" open>
+        <summary class="admin-collapsible-summary">Current Members</summary>
+        <div class="admin-collapsible-body">
+          <div id="teamMemberList"><p>Loading…</p></div>
+        </div>
+      </details>
+    </div>
+
+    <!-- TAB: Portal Insights -->
+    <div id="adminTab-insights" class="portal-admin-panel${activeTab === "insights" ? "" : " hidden"}">
+      <details class="admin-collapsible" open>
+        <summary class="admin-collapsible-summary">Page Visit Counts</summary>
+        <div class="admin-collapsible-body">
+          <div id="visitSummary"><p>Loading…</p></div>
+          <button id="exportVisitsCsvBtn" type="button" class="retry-btn">Export Visits CSV</button>
+        </div>
+      </details>
+      <details class="admin-collapsible" open>
+        <summary class="admin-collapsible-summary">Recent Feedback</summary>
+        <div class="admin-collapsible-body">
+          <div id="feedbackSummary"><p>Loading…</p></div>
+          <button id="exportFeedbackCsvBtn" type="button" class="retry-btn">Export Feedback CSV</button>
+        </div>
+      </details>
+    </div>
+  `;
+
+  // Tab switching
+  contentArea.querySelectorAll(".portal-admin-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      renderPortalAdmin(btn.getAttribute("data-tab"));
+    });
+  });
+
+  // Shared state
+  let latestVisits = [];
+  let latestFeedback = [];
+
+  // ── Pages tab ────────────────────────────────────────────────
+  const portalAdminForm = document.getElementById("portalAdminForm");
+  const portalAdminStatus = document.getElementById("portalAdminStatus");
+
+  const fillPageForm = async () => {
+    const pages = await loadPortalPages();
+    pages.forEach((page) => {
+      const titleEl = document.getElementById(`page-title-${page.slug}`);
+      const subtitleEl = document.getElementById(`page-subtitle-${page.slug}`);
+      const bodyEl = document.getElementById(`page-body-${page.slug}`);
+      const contactEl = document.getElementById(`page-contact-${page.slug}`);
+      if (titleEl) titleEl.value = page.title;
+      if (subtitleEl) subtitleEl.value = page.subtitle;
+      if (bodyEl) bodyEl.value = page.body;
+      if (contactEl) contactEl.value = page.contactEmail || "";
+    });
+  };
+
+  if (portalAdminForm) {
+    fillPageForm();
+    portalAdminForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!currentProfile.isPortalAdmin) {
+        portalAdminStatus.className = "error";
+        portalAdminStatus.textContent = "Only Portal Admins can save changes.";
+        return;
+      }
+      const updates = PORTAL_PAGE_DEFS.map((def) => ({
+        slug: def.slug,
+        title: String(document.getElementById(`page-title-${def.slug}`)?.value || "").trim() || def.defaultTitle,
+        subtitle: String(document.getElementById(`page-subtitle-${def.slug}`)?.value || "").trim() || def.defaultSubtitle,
+        body: String(document.getElementById(`page-body-${def.slug}`)?.value || "").trim() || def.defaultBody,
+        contactEmail: String(document.getElementById(`page-contact-${def.slug}`)?.value || "").trim() || null
+      }));
+      const error = await savePortalPages(updates);
+      if (error) {
+        portalAdminStatus.className = "error";
+        portalAdminStatus.textContent = `Save failed: ${error.message}`;
+        return;
+      }
+      portalAdminStatus.className = "success";
+      portalAdminStatus.textContent = "All pages saved successfully.";
+    });
+  }
+
+  // ── Members tab ───────────────────────────────────────────────
+  const teamMemberForm = document.getElementById("teamMemberForm");
+  const teamMemberStatus = document.getElementById("teamMemberStatus");
+  const teamMemberList = document.getElementById("teamMemberList");
+
+  const refreshMemberList = async () => {
+    if (!teamMemberList) return;
+    const members = await loadTeamMembers();
+    teamMemberList.innerHTML = members.length
+      ? `<ul>${members.map((m) => `
+          <li class="admin-item">
+            <strong>${escapeHtml(m.name)}</strong> — ${escapeHtml(m.role || "")}
+            <button type="button" class="logout-btn" data-remove-member="${escapeHtml(m.id)}" style="float:right">Remove</button>
+          </li>`).join("")}</ul>`
+      : "<p>No team members yet.</p>";
+    teamMemberList.querySelectorAll("button[data-remove-member]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const err = await deleteTeamMember(btn.getAttribute("data-remove-member"));
+        if (err) {
+          if (teamMemberStatus) {
+            teamMemberStatus.className = "error";
+            teamMemberStatus.textContent = `Remove failed: ${err.message}`;
+          }
+          return;
+        }
+        if (teamMemberStatus) {
+          teamMemberStatus.className = "success";
+          teamMemberStatus.textContent = "Member removed.";
+        }
+        refreshMemberList();
+      });
+    });
+  };
+
+  if (teamMemberList) refreshMemberList();
+
+  if (teamMemberForm) {
+    teamMemberForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const memberName = String(document.getElementById("memberName")?.value || "").trim();
+      const memberRole = String(document.getElementById("memberRole")?.value || "").trim();
+      const memberSort = Number(document.getElementById("memberSort")?.value || 1);
+      const memberImageFile = document.getElementById("memberImage")?.files?.[0] || null;
+      const memberImageUrlInput = String(document.getElementById("memberImageUrl")?.value || "").trim();
+      if (!memberName || !memberRole) {
+        if (teamMemberStatus) {
+          teamMemberStatus.className = "error";
+          teamMemberStatus.textContent = "Name and role are required.";
+        }
+        return;
+      }
+      try {
+        let finalImageUrl = memberImageUrlInput;
+        if (memberImageFile) finalImageUrl = await uploadTeamMemberImage(memberImageFile);
+        const insertError = await createTeamMember({
+          name: memberName,
+          role: memberRole,
+          image_url: finalImageUrl || null,
+          sort_order: Number.isFinite(memberSort) ? memberSort : 1,
+          is_active: true
+        });
+        if (insertError) {
+          if (teamMemberStatus) {
+            teamMemberStatus.className = "error";
+            teamMemberStatus.textContent = `Add failed: ${insertError.message}`;
+          }
+          return;
+        }
+        teamMemberForm.reset();
+        if (teamMemberStatus) {
+          teamMemberStatus.className = "success";
+          teamMemberStatus.textContent = "Team member added.";
+        }
+        refreshMemberList();
+      } catch (err) {
+        if (teamMemberStatus) {
+          teamMemberStatus.className = "error";
+          teamMemberStatus.textContent = `Upload failed: ${err.message || "Unknown error"}`;
+        }
+      }
+    });
+  }
+
+  // ── Insights tab ─────────────────────────────────────────────
+  const visitSummary = document.getElementById("visitSummary");
+  const feedbackSummary = document.getElementById("feedbackSummary");
+  const exportVisitsCsvBtn = document.getElementById("exportVisitsCsvBtn");
+  const exportFeedbackCsvBtn = document.getElementById("exportFeedbackCsvBtn");
+
+  const loadInsights = async () => {
+    if (visitSummary) {
+      const visits = await loadVisitSummary();
+      latestVisits = visits;
+      visitSummary.innerHTML = visits.length
+        ? `<ul>${visits.map((x) => `<li><strong>${escapeHtml(x.slug)}</strong>: ${x.count} unique visitor${x.count !== 1 ? "s" : ""}</li>`).join("")}</ul>`
+        : "<p>No visits tracked yet.</p>";
+    }
+    if (feedbackSummary) {
+      const feedback = await loadFeedback();
+      latestFeedback = feedback;
+      feedbackSummary.innerHTML = feedback.length
+        ? `<ul>${feedback.map((item) => `
+            <li>
+              <strong>${escapeHtml(item.page_slug || "general")}</strong>
+              — <em>${escapeHtml(item.name || "Guest")}</em>:
+              ${escapeHtml(item.comment || "")}
+            </li>`).join("")}</ul>`
+        : "<p>No feedback yet.</p>";
+    }
+  };
+
+  if (activeTab === "insights") loadInsights();
+
+  if (exportVisitsCsvBtn) {
+    exportVisitsCsvBtn.addEventListener("click", async () => {
+      if (!latestVisits.length) await loadInsights();
+      downloadCsv("portal-visits.csv", ["page_slug", "unique_visitors"], latestVisits.map((x) => [x.slug, String(x.count)]));
+    });
+  }
+
+  if (exportFeedbackCsvBtn) {
+    exportFeedbackCsvBtn.addEventListener("click", async () => {
+      if (!latestFeedback.length) await loadInsights();
+      downloadCsv(
+        "portal-feedback.csv",
+        ["id", "page_slug", "name", "email", "comment", "created_at"],
+        latestFeedback.map((item) => [item.id, item.page_slug, item.name, item.email || "", item.comment, item.created_at])
+      );
+    });
+  }
+
+  // Pre-load insights if that tab is active, pages/members load on demand above
+  if (activeTab === "insights" && !visitSummary?.textContent.includes("visits")) {
+    loadInsights();
+  }
+}
+
 async function restoreSession() {
   const { data, error } = await supabaseClient.auth.getSession();
   if (error || !data.session?.user) {
@@ -509,7 +1009,7 @@ async function restoreSession() {
   currentUser = data.session.user;
   currentProfile = await fetchProfile(currentUser);
   await loadMenuItems();
-  showApp(currentProfile.displayName, currentProfile.isCoach);
+  showApp(currentProfile.displayName, currentProfile.isCoach, currentProfile.isPortalAdmin);
 }
 
 async function onSubmit(event) {
@@ -558,7 +1058,7 @@ async function onSubmit(event) {
     currentUser = await loginUser(email, password);
     currentProfile = await fetchProfile(currentUser);
     await loadMenuItems();
-    showApp(currentProfile.displayName, currentProfile.isCoach);
+    showApp(currentProfile.displayName, currentProfile.isCoach, currentProfile.isPortalAdmin);
   } catch (error) {
     loginError.textContent = error.message || "Something went wrong. Please try again.";
 
@@ -583,7 +1083,7 @@ async function onLogout() {
 
   await supabaseClient.auth.signOut();
   currentUser = null;
-  currentProfile = { displayName: "Member", isCoach: false };
+  currentProfile = { displayName: "Member", isCoach: false, isPortalAdmin: false };
   navItems = [...DEFAULT_NAV_ITEMS];
   selectedMenuId = DEFAULT_NAV_ITEMS[0].id;
   loginForm.reset();
@@ -621,6 +1121,9 @@ if (logoutBtn) {
 }
 if (coachAdminBtn) {
   coachAdminBtn.addEventListener("click", renderCoachAdmin);
+}
+if (document.getElementById("portalAdminBtn")) {
+  document.getElementById("portalAdminBtn").addEventListener("click", renderPortalAdmin);
 }
 if (retryBtn) {
   retryBtn.addEventListener("click", () => {

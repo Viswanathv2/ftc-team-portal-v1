@@ -252,6 +252,15 @@ button {
   border: 2px solid var(--success);
 }
 
+.portal-admin-btn {
+  background: #e6f3ff;
+  color: #0d47a1;
+}
+
+.portal-admin-btn.active {
+  border: 2px solid var(--accent-2);
+}
+
 .content {
   padding: 24px;
   display: grid;
@@ -527,6 +536,220 @@ textarea:focus {
   padding: 8px 0;
   color: var(--ink);
   line-height: 1.5;
+}
+
+.sponsorship-levels {
+  background: linear-gradient(135deg, #fef5f0, #fef9f7);
+  border: 2px solid #ff9966;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.sponsorship-levels h3 {
+  margin: 0 0 18px;
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
+.sponsor-level {
+  background: #ffffff;
+  border-left: 4px solid #ff7b54;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.sponsor-level h4 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  color: var(--ink);
+  font-family: "Baloo 2", cursive;
+}
+
+.sponsor-level ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.sponsor-level li {
+  font-size: 0.95rem;
+  color: var(--muted);
+  padding-left: 20px;
+  position: relative;
+}
+
+.sponsor-level li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.sponsor-level.platinum {
+  border-left-color: #ffc107;
+  background: linear-gradient(135deg, #fffef9, #fffdfb);
+}
+
+.sponsor-level.platinum h4 {
+  color: #b8860b;
+}
+
+.sponsor-level.gold {
+  border-left-color: #ffd700;
+  background: linear-gradient(135deg, #fffef7, #fffcf5);
+}
+
+.sponsor-level.gold h4 {
+  color: #d4a017;
+}
+
+.sponsor-level.silver {
+  border-left-color: #c0c0c0;
+  background: linear-gradient(135deg, #fffef8, #fffdf9);
+}
+
+.sponsor-level.silver h4 {
+  color: #808080;
+}
+
+
+.sponsor-level.friends h4 {
+  color: #228b22;
+}
+
+.email-link {
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.email-link:hover {
+  color: #5ba3ff;
+  text-decoration: underline;
+}
+
+.feedback-item {
+  border: 2px solid #e7f1f8;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #ffffff;
+}
+
+/* Portal Admin Tabs */
+.portal-admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.portal-admin-tab {
+  background: #eef6ff;
+  color: var(--ink);
+  border: 2px solid #deedf9;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.portal-admin-tab.active {
+  background: #e1efff;
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.portal-admin-tab:hover:not(.active) {
+  background: #f0f8ff;
+  border-color: #b8d8f5;
+}
+
+.portal-admin-panel {
+  animation: pop-in 0.3s ease;
+}
+
+/* Collapsible sections */
+.admin-collapsible {
+  border: 2px solid #e7f1f8;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.admin-collapsible-summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: "Baloo 2", cursive;
+  font-size: 1.05rem;
+  background: #f6fbff;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.admin-collapsible-summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-collapsible-summary::after {
+  content: "▸";
+  font-size: 0.9rem;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+details[open] > .admin-collapsible-summary::after {
+  transform: rotate(90deg);
+}
+
+.admin-collapsible-body {
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+/* Select dropdown */
+select {
+  border: 2px solid #dce9f2;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 1rem;
+  background: #fff;
+}
+
+select:focus {
+  outline: 3px solid rgba(58, 134, 255, 0.3);
+  border-color: var(--accent-2);
+}
+
+#teamMemberList ul,
+#visitSummary ul,
+#feedbackSummary ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  gap: 10px;
+}
+
+#teamMemberList li,
+#visitSummary li,
+#feedbackSummary li {
+  border: 2px solid #e7f1f8;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
 }
 
 .sponsorship-cta {
