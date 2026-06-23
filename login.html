@@ -7,6 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script>
+    (function(){
+      try{
+        const t = localStorage.getItem('site-theme');
+        if (t === 'dark') document.documentElement.classList.add('dark-theme');
+      } catch(e){}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -21,7 +29,13 @@
       <li><a href="sponsorship.html">Sponsorship Needed</a></li>
       <li><a href="resources.html">Resources</a></li>
       <li><a href="feedback.html">Feedback</a></li>
-      <li><a class="active" href="login.html">Login</a></li>
+      <li class="account-nav">
+        <a id="accountBtn" class="account-btn" href="#">Login</a>
+        <div id="accountDropdown" class="account-dropdown hidden" aria-hidden="true">
+          <button id="teamMenuBtn" type="button">Team Menu</button>
+          <button id="accountLogoutBtn" type="button">Log Out</button>
+        </div>
+      </li>
     </ul>
   </nav>
 
@@ -70,7 +84,7 @@
         </nav>
         <button id="coachAdminBtn" class="coach-admin-btn hidden" type="button">Coach Admin</button>
         <button id="portalAdminBtn" class="portal-admin-btn hidden" type="button">Portal Admin</button>
-        <button id="logoutBtn" class="logout-btn">Log Out</button>
+        
       </aside>
 
       <section class="content">

@@ -7,6 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script>
+    (function(){
+      try{
+        const t = localStorage.getItem('site-theme');
+        if (t === 'dark') document.documentElement.classList.add('dark-theme');
+      } catch(e){}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body data-page="team">
@@ -31,10 +39,10 @@
       </header>
       <div class="landing-container">
         <section class="landing-section">
-          <div id="publicPageBody" class="content-box">
-            <p>Meet the team members who design, build, and program our robot.</p>
+          <div class="section-header">
+            <h2>Team Members</h2>
+            <button type="button" class="section-toggle" data-target="publicTeamGrid" aria-label="Toggle Team Members"><span class="section-arrow" aria-hidden="true">▸</span></button>
           </div>
-          <h2>Team Members</h2>
           <div id="publicTeamGrid" class="team-grid">
             <div class="team-member-card">
               <img src="assets/images/member1.jpg" alt="Team member" onerror="this.style.display='none'" />
@@ -55,6 +63,17 @@
               <img src="assets/images/member4.jpg" alt="Team member" onerror="this.style.display='none'" />
               <h3>[Member Name]</h3>
               <p>[Role/Position]</p>
+            </div>
+          </div>
+          
+          <div class="section-header">
+            <h2>Alumni</h2>
+            <button type="button" class="section-toggle" data-target="publicAlumniGrid" aria-label="Toggle Alumni"><span class="section-arrow" aria-hidden="true">▸</span></button>
+          </div>
+          <div id="publicAlumniGrid" class="team-grid">
+            <div class="team-member-card">
+              <h3>No alumni yet</h3>
+              <p>Check back later for our past members.</p>
             </div>
           </div>
         </section>

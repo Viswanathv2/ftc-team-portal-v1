@@ -41,6 +41,7 @@ const PUBLIC_PAGE_DEFAULTS = {
 };
 
 let publicSupabase = null;
+let _accountDocListenerAdded = false;
 
 function escapeHtml(value) {
   return String(value || "")
@@ -120,7 +121,7 @@ async function loadTeamMembers() {
 
   const { data, error } = await publicSupabase
     .from("team_members")
-    .select("name,role,image_url")
+    .select("name,roles,grade,image_url,bio")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
@@ -131,15 +132,180 @@ async function loadTeamMembers() {
 
   teamGrid.innerHTML = data
     .map(
-      (member) => `
-        <div class="team-member-card">
-          ${member.image_url ? `<img src="${escapeHtml(member.image_url)}" alt="${escapeHtml(member.name)}" onerror="this.style.display='none'" />` : ""}
+      (member) => {
+        const rolesRaw = member.roles || "";
+        const rolesArr = rolesRaw ? rolesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        const roleDisplay = formatRolesForDisplay(rolesArr);
+        return `
+        <div class="team-member-card" data-name="${escapeHtml(member.name)}" data-roles="${escapeHtml(rolesRaw||"")}" data-grade="${escapeHtml(member.grade||"")}" data-bio="${escapeHtml(member.bio||"")}" data-image="${escapeHtml(member.image_url||"")}">
+          ${member.image_url ? `<img src="${escapeHtml(member.image_url)}" alt="${escapeHtml(member.name)}" onerror="this.style.display='none'" />` : "<div style=\"width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,0.03);margin-bottom:12px;\"></div>"}
           <h3>${escapeHtml(member.name)}</h3>
-          <p>${escapeHtml(member.role || "")}</p>
+          ${member.grade ? `<div class="member-grade">Grade: ${escapeHtml(member.grade)}</div>` : ''}
+          <p>${escapeHtml(roleDisplay)}</p>
+        </div>
+      `}
+    )
+    .join("");
+
+  // Use event delegation for clicks to open member modal
+  teamGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('.team-member-card');
+    if (!card) return;
+    let name = card.getAttribute('data-name');
+    let rolesRaw = card.getAttribute('data-roles') || '';
+    let grade = card.getAttribute('data-grade') || '';
+    let bio = card.getAttribute('data-bio');
+    let image = card.getAttribute('data-image');
+    // fallback to DOM content if attributes are missing (placeholder/static cards)
+    if (!name) {
+      const h3 = card.querySelector('h3');
+      name = h3 ? h3.textContent.trim() : '';
+    }
+    if (!rolesRaw) {
+      const p = card.querySelector('p');
+      rolesRaw = p ? p.textContent.trim() : '';
+    }
+    if (!image) {
+      const img = card.querySelector('img');
+      image = img ? img.getAttribute('src') : '';
+    }
+    const rolesArr = rolesRaw ? rolesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    const roleDisplay = formatRolesForDisplay(rolesArr);
+    showMemberModal({ name, role: roleDisplay, grade, bio, image, isEditable: false });
+  });
+}
+
+function formatRolesForDisplay(rolesArr) {
+  if (!Array.isArray(rolesArr) || rolesArr.length === 0) return "";
+  const sorted = rolesArr.slice().sort((a,b)=>a.localeCompare(b));
+  if (sorted.length === 1) return sorted[0];
+  if (sorted.length === 2) return `${sorted[0]} and ${sorted[1]}`;
+  return `${sorted.slice(0, -1).join(', ')}, and ${sorted[sorted.length - 1]}`;
+}
+
+async function loadAlumni() {
+  const alumniGrid = document.getElementById("publicAlumniGrid");
+  if (!alumniGrid || !publicSupabase) {
+    return;
+  }
+
+  const { data, error } = await publicSupabase
+    .from("alumni")
+    .select("name,role,year,image_url,bio")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error || !Array.isArray(data) || !data.length) {
+    return;
+  }
+
+  alumniGrid.innerHTML = data
+    .map(
+      (a) => `
+        <div class="team-member-card" data-name="${escapeHtml(a.name)}" data-role="${escapeHtml(a.role||"")}" data-bio="${escapeHtml(a.bio||"")}" data-image="${escapeHtml(a.image_url||"")}">
+          ${a.image_url ? `<img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(a.name)}" onerror="this.style.display='none'" />` : "<div style=\"width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,0.03);margin-bottom:12px;\"></div>"}
+          <h3>${escapeHtml(a.name)}</h3>
+          <p>${escapeHtml(a.role || "")} ${a.year ? `— ${escapeHtml(String(a.year))}` : ""}</p>
         </div>
       `
     )
     .join("");
+
+  // delegation for alumni clicks
+  alumniGrid.addEventListener('click', (e) => {
+    const card = e.target.closest('.team-member-card');
+    if (!card) return;
+    let name = card.getAttribute('data-name');
+    let role = card.getAttribute('data-role');
+    let bio = card.getAttribute('data-bio');
+    let image = card.getAttribute('data-image');
+    if (!name) {
+      const h3 = card.querySelector('h3');
+      name = h3 ? h3.textContent.trim() : '';
+    }
+    if (!role) {
+      const p = card.querySelector('p');
+      role = p ? p.textContent.trim() : '';
+    }
+    if (!image) {
+      const img = card.querySelector('img');
+      image = img ? img.getAttribute('src') : '';
+    }
+    showMemberModal({ name, role, bio, image, isEditable: false });
+  });
+
+  // global fallback delegation: handle clicks on any .team-member-card (covers edge cases)
+  document.addEventListener('click', (e) => {
+    const card = e.target.closest('.team-member-card');
+    if (!card) return;
+    // if a modal is already open, ignore
+    if (document.getElementById('memberModalOverlay')?.classList.contains('is-open')) return;
+    let name = card.getAttribute('data-name');
+    let rolesRaw = card.getAttribute('data-roles') || '';
+    let grade = card.getAttribute('data-grade') || '';
+    let bio = card.getAttribute('data-bio');
+    let image = card.getAttribute('data-image');
+    if (!name) {
+      const h3 = card.querySelector('h3');
+      name = h3 ? h3.textContent.trim() : '';
+    }
+    if (!rolesRaw) {
+      const p = card.querySelector('p');
+      rolesRaw = p ? p.textContent.trim() : '';
+    }
+    if (!image) {
+      const img = card.querySelector('img');
+      image = img ? img.getAttribute('src') : '';
+    }
+    const rolesArr = rolesRaw ? rolesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    const roleDisplay = formatRolesForDisplay(rolesArr);
+    showMemberModal({ name, role: roleDisplay, grade, bio, image, isEditable: false });
+  });
+}
+
+// Simple reusable modal for member details
+function showMemberModal({ name, role, bio, image, isEditable = false, onSave }) {
+  let overlay = document.getElementById('memberModalOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'memberModalOverlay';
+    overlay.className = 'member-modal-overlay';
+    overlay.innerHTML = `
+      <div class="member-modal" role="dialog" aria-modal="true">
+        <div class="member-media"><img id="modalMemberImage" src="" alt=""/></div>
+        <div class="member-body">
+          <h3 id="modalMemberName"></h3>
+          <div class="meta"><span id="modalMemberRole"></span> <span id="modalMemberGrade"></span></div>
+          <div class="bio" id="modalMemberBio"></div>
+          <div class="modal-actions">
+            <button id="modalCloseBtn" type="button">Close</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#modalCloseBtn').addEventListener('click', () => {
+      overlay.classList.remove('is-open');
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.classList.remove('is-open');
+    });
+  }
+
+  const img = overlay.querySelector('#modalMemberImage');
+  const nm = overlay.querySelector('#modalMemberName');
+  const rl = overlay.querySelector('#modalMemberRole');
+  const gr = overlay.querySelector('#modalMemberGrade');
+  const bioEl = overlay.querySelector('#modalMemberBio');
+
+  img.src = image || '';
+  img.alt = name || 'Member image';
+  nm.textContent = name || '';
+  rl.textContent = role || '';
+  gr.textContent = grade ? `Grade: ${grade}` : '';
+  bioEl.textContent = bio || '';
+
+  overlay.classList.add('is-open');
 }
 
 async function trackVisit(pageSlug) {
@@ -269,9 +435,133 @@ async function initPublicPortal() {
 
   applyPageContent(content);
   await loadTeamMembers();
+  await loadAlumni();
+  // wire collapse/expand buttons on public pages
+  document.querySelectorAll('.section-toggle').forEach((btn) => {
+    // initialize pressed state
+    btn.setAttribute('aria-pressed', 'false');
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      const isCollapsed = el.classList.toggle('collapsed');
+      btn.setAttribute('aria-pressed', isCollapsed ? 'true' : 'false');
+    });
+  });
   await loadFeedback(pageSlug);
   setupFeedbackForm(pageSlug);
   trackVisit(pageSlug);
+  initAccountNavPublic();
+}
+
+async function updateAccountUiPublic() {
+  const accountBtn = document.getElementById("accountBtn");
+  const accountDropdown = document.getElementById("accountDropdown");
+  const teamMenuBtn = document.getElementById("teamMenuBtn");
+  const accountLogoutBtn = document.getElementById("accountLogoutBtn");
+
+  if (!publicSupabase || !accountBtn) {
+    return;
+  }
+
+  const { data } = await publicSupabase.auth.getUser();
+  const user = data?.user || null;
+
+  if (user) {
+    accountBtn.textContent = "My Account";
+    accountBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (accountDropdown) accountDropdown.classList.toggle("hidden");
+    };
+
+    if (teamMenuBtn) {
+      teamMenuBtn.onclick = () => {
+        window.location.href = "login.html";
+      };
+    }
+
+    if (accountLogoutBtn) {
+      accountLogoutBtn.onclick = async () => {
+        await publicSupabase.auth.signOut();
+        if (accountDropdown) accountDropdown.classList.add("hidden");
+        accountBtn.textContent = "Login";
+        window.location.href = "index.html";
+      };
+    }
+  } else {
+    accountBtn.textContent = "Login";
+    accountBtn.onclick = () => {
+      window.location.href = "login.html";
+    };
+    if (accountDropdown) {
+      accountDropdown.classList.add("hidden");
+    }
+  }
+
+  // Close dropdown when clicking outside — only add one global handler
+  if (!_accountDocListenerAdded) {
+    document.addEventListener("click", () => {
+      const dd = document.getElementById("accountDropdown");
+      if (dd && !dd.classList.contains("hidden")) {
+        dd.classList.add("hidden");
+      }
+    });
+    _accountDocListenerAdded = true;
+  }
+}
+
+function initAccountNavPublic() {
+  // Replace existing login link in nav with account button + dropdown
+  const loginLink = document.querySelector('.top-nav-list a[href="login.html"]');
+  if (!loginLink) return;
+
+  const li = loginLink.closest('li');
+  if (!li) return;
+
+  const wrapper = document.createElement('li');
+  wrapper.className = 'account-nav';
+  wrapper.innerHTML = `
+    <a id="accountBtn" class="account-btn" href="#">Login</a>
+    <div id="accountDropdown" class="account-dropdown hidden" aria-hidden="true">
+      <button id="teamMenuBtn" type="button">Team Menu</button>
+      <button id="accountLogoutBtn" type="button">Log Out</button>
+    </div>
+  `;
+
+  li.parentElement.replaceChild(wrapper, li);
+  // insert theme toggle before account wrapper
+  const ul = wrapper.parentElement;
+  const themeLi = document.createElement('li');
+  themeLi.innerHTML = `<a id="themeToggleBtn" class="theme-toggle" href="#" aria-label="Toggle theme"><span class="toggle-switch"><svg class="icon sun" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4"/></svg><svg class="icon moon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><span class="toggle-knob" aria-hidden="true"></span></span></a>`;
+  ul.insertBefore(themeLi, wrapper);
+
+  // wire theme toggle
+  const themeToggle = document.getElementById('themeToggleBtn');
+  function applyStoredTheme() {
+    const t = localStorage.getItem('site-theme') || 'light';
+    const isDark = t === 'dark';
+    if (isDark) document.documentElement.classList.add('dark-theme');
+    else document.documentElement.classList.remove('dark-theme');
+    if (themeToggle) themeToggle.classList.toggle('is-dark', isDark);
+  }
+  applyStoredTheme();
+  if (themeToggle) {
+    themeToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isDark = document.documentElement.classList.toggle('dark-theme');
+      localStorage.setItem('site-theme', isDark ? 'dark' : 'light');
+      themeToggle.classList.toggle('is-dark', isDark);
+    });
+  }
+
+  updateAccountUiPublic();
+
+  // Listen for auth state changes
+  if (publicSupabase && publicSupabase.auth && publicSupabase.auth.onAuthStateChange) {
+    publicSupabase.auth.onAuthStateChange(() => {
+      updateAccountUiPublic();
+    });
+  }
 }
 
 initPublicPortal();

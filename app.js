@@ -106,6 +106,7 @@ let authCooldownUntil = 0;
 let authCooldownMode = "login";
 let cooldownIntervalId = null;
 let isSubmitInFlight = false;
+let _appAccountDocListenerAdded = false;
 
 function escapeHtml(value) {
   return String(value)
@@ -432,7 +433,21 @@ async function savePortalPages(items) {
 async function loadTeamMembers() {
   const { data, error } = await supabaseClient
     .from("team_members")
-    .select("id,name,role,image_url,sort_order")
+    .select("id,name,roles,grade,image_url,sort_order,bio")
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return [];
+  }
+
+  return data || [];
+}
+
+async function loadAlumni() {
+  const { data, error } = await supabaseClient
+    .from("alumni")
+    .select("id,name,role,year,image_url,sort_order")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
@@ -467,8 +482,23 @@ async function createTeamMember(member) {
   return error;
 }
 
+async function createAlumnus(alumnus) {
+  const { error } = await supabaseClient.from("alumni").insert(alumnus);
+  return error;
+}
+
+async function updateTeamMember(memberId, updates) {
+  const { error } = await supabaseClient.from("team_members").update(updates).eq("id", memberId);
+  return error;
+}
+
 async function deleteTeamMember(memberId) {
   const { error } = await supabaseClient.from("team_members").delete().eq("id", memberId);
+  return error;
+}
+
+async function deleteAlumnus(alumnusId) {
+  const { error } = await supabaseClient.from("alumni").delete().eq("id", alumnusId);
   return error;
 }
 
@@ -766,8 +796,20 @@ function renderPortalAdmin(activeTab = "pages") {
           <form id="teamMemberForm" class="admin-form">
             <label for="memberName">Name</label>
             <input id="memberName" type="text" required placeholder="Member name" />
-            <label for="memberRole">Role</label>
-            <input id="memberRole" type="text" required placeholder="Driver / Programmer / Builder" />
+            <label>Role(s)</label>
+            <div id="memberRolesList" class="role-checkboxes">
+              <label><input type="checkbox" value="Drive Team" /> Drive Team</label>
+              <label><input type="checkbox" value="Programmer" /> Programmer</label>
+              <label><input type="checkbox" value="Builder" /> Builder</label>
+              <label><input type="checkbox" value="3D Designer" /> 3D Designer</label>
+              <label><input type="checkbox" value="Outreach Management" /> Outreach Management</label>
+              <label><input type="checkbox" value="Engineering Portfolio Crew" /> Engineering Portfolio Crew</label>
+              <label><input type="checkbox" value="custom" /> Custom role...</label>
+            </div>
+            <label for="memberCustomRole" class="hidden">Custom Role</label>
+            <input id="memberCustomRole" type="text" placeholder="Custom role" />
+            <label for="memberGrade">Grade</label>
+            <input id="memberGrade" type="text" placeholder="e.g. 10th" />
             <label for="memberSort">Sort Order (1 = first)</label>
             <input id="memberSort" type="number" min="1" value="1" />
             <label for="memberImage">Upload Photo</label>
@@ -783,6 +825,28 @@ function renderPortalAdmin(activeTab = "pages") {
         <summary class="admin-collapsible-summary">Current Members</summary>
         <div class="admin-collapsible-body">
           <div id="teamMemberList"><p>Loading…</p></div>
+        </div>
+      </details>
+      <details class="admin-collapsible" open>
+        <summary class="admin-collapsible-summary">Alumni</summary>
+        <div class="admin-collapsible-body">
+          <form id="alumniForm" class="admin-form">
+            <label for="alumniName">Name</label>
+            <input id="alumniName" type="text" required placeholder="Alumnus name" />
+            <label for="alumniRole">Role / Notes</label>
+            <input id="alumniRole" type="text" placeholder="Role or short note" />
+            <label for="alumniYear">Graduation Year</label>
+            <input id="alumniYear" type="number" min="1900" max="2100" placeholder="2024" />
+            <label for="alumniSort">Sort Order (1 = first)</label>
+            <input id="alumniSort" type="number" min="1" value="1" />
+            <label for="alumniImage">Upload Photo</label>
+            <input id="alumniImage" type="file" accept="image/*" />
+            <label for="alumniImageUrl">Or paste Image URL</label>
+            <input id="alumniImageUrl" type="url" placeholder="https://..." />
+            <button type="submit" class="admin-save-btn">Add Alumnus</button>
+            <p id="alumniStatus" class="success" aria-live="polite"></p>
+          </form>
+          <div id="alumniList"><p>Loading…</p></div>
         </div>
       </details>
     </div>
@@ -812,6 +876,21 @@ function renderPortalAdmin(activeTab = "pages") {
       renderPortalAdmin(btn.getAttribute("data-tab"));
     });
   });
+
+  // Show/hide custom role input when checkboxes change
+  const memberRolesContainer = document.getElementById('memberRolesList');
+  const memberCustomEl = document.getElementById('memberCustomRole');
+  if (memberRolesContainer && memberCustomEl) {
+    const toggleCustom = () => {
+      const customCheckbox = memberRolesContainer.querySelector('input[type="checkbox"][value="custom"]');
+      const customSelected = customCheckbox && customCheckbox.checked;
+      memberCustomEl.style.display = customSelected ? 'block' : 'none';
+      const lbl = memberCustomEl.previousElementSibling;
+      if (lbl) lbl.style.display = customSelected ? 'block' : 'none';
+    };
+    memberRolesContainer.addEventListener('change', toggleCustom);
+    toggleCustom();
+  }
 
   // Shared state
   let latestVisits = [];
@@ -867,16 +946,26 @@ function renderPortalAdmin(activeTab = "pages") {
   const teamMemberStatus = document.getElementById("teamMemberStatus");
   const teamMemberList = document.getElementById("teamMemberList");
 
+  const alumniForm = document.getElementById("alumniForm");
+  const alumniStatus = document.getElementById("alumniStatus");
+  const alumniList = document.getElementById("alumniList");
+
   const refreshMemberList = async () => {
     if (!teamMemberList) return;
     const members = await loadTeamMembers();
     teamMemberList.innerHTML = members.length
       ? `<ul>${members.map((m) => `
           <li class="admin-item">
-            <strong>${escapeHtml(m.name)}</strong> — ${escapeHtml(m.role || "")}
-            <button type="button" class="logout-btn" data-remove-member="${escapeHtml(m.id)}" style="float:right">Remove</button>
+            <strong>${escapeHtml(m.name)}</strong>
+            <div style="float:right">
+              <button type="button" class="portal-edit-member" data-edit-member="${escapeHtml(m.id)}">Edit</button>
+              <button type="button" class="logout-btn" data-remove-member="${escapeHtml(m.id)}">Remove</button>
+            </div>
+            <div style="clear:both;margin-top:6px;color:var(--muted)">${escapeHtml(formatRolesAdmin(m.roles))} ${m.grade ? ` — ${escapeHtml(m.grade)}` : ''}</div>
+            <div class="admin-bio" data-bio-id="${escapeHtml(m.id)}" style="margin-top:8px;color:var(--muted)">${escapeHtml(m.bio||"")}</div>
           </li>`).join("")}</ul>`
       : "<p>No team members yet.</p>";
+
     teamMemberList.querySelectorAll("button[data-remove-member]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const err = await deleteTeamMember(btn.getAttribute("data-remove-member"));
@@ -894,31 +983,228 @@ function renderPortalAdmin(activeTab = "pages") {
         refreshMemberList();
       });
     });
+
+    teamMemberList.querySelectorAll("button[data-edit-member]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-edit-member");
+        // fetch latest member data
+        const members = await loadTeamMembers();
+        const member = (members || []).find(m => String(m.id) === String(id));
+        if (!member) {
+          if (teamMemberStatus) {
+            teamMemberStatus.className = "error";
+            teamMemberStatus.textContent = "Member not found.";
+          }
+          return;
+        }
+
+        // build inline edit form
+        const li = btn.closest('li.admin-item');
+        if (!li) return;
+        const originalHtml = li.innerHTML;
+
+        const rolesOptions = ["Drive Team","Programmer","Builder","3D Designer","Outreach Management","Engineering Portfolio Crew","custom"];
+        const rolesArr = String(member.roles || "").split(',').map(s=>s.trim()).filter(Boolean);
+
+        li.innerHTML = `
+          <strong>${escapeHtml(member.name)}</strong>
+          <div style="float:right">
+            <button type="button" class="save-member" data-save-member="${escapeHtml(member.id)}">Save</button>
+            <button type="button" class="cancel-edit">Cancel</button>
+          </div>
+          <div style="clear:both;margin-top:8px">
+            <label>Roles (select multiple)</label>
+            <div class="role-checkboxes edit-member-roles">
+              ${rolesOptions.map(opt => `<label><input type="checkbox" value="${escapeHtml(opt)}" ${rolesArr.includes(opt) ? 'checked' : ''} /> ${escapeHtml(opt === 'custom' ? 'Custom role...' : opt)}</label>`).join('')}
+            </div>
+            <label style="display:none">Custom Role</label>
+            <input class="edit-member-custom" type="text" placeholder="Custom role" value="${escapeHtml(rolesArr.filter(r=>!rolesOptions.includes(r)).join(', '))}" />
+            <label>Grade</label>
+            <input class="edit-member-grade" type="text" value="${escapeHtml(member.grade||'')}" />
+            <label>Bio</label>
+            <textarea class="edit-member-bio">${escapeHtml(member.bio||'')}</textarea>
+            <div class="edit-member-image">
+              ${member.image_url ? `<img src="${escapeHtml(member.image_url)}" alt="preview" />` : ''}
+              <input type="file" class="edit-member-image-file" accept="image/*" />
+            </div>
+          </div>
+        `;
+
+        const rolesContainer = li.querySelector('.edit-member-roles');
+        const customEl = li.querySelector('.edit-member-custom');
+        const saveBtn = li.querySelector('button.save-member');
+        const cancelBtn = li.querySelector('button.cancel-edit');
+
+        // wire image preview for selected file
+        const imgPreview = li.querySelector('.edit-member-image img');
+        const fileInput = li.querySelector('.edit-member-image-file');
+        if (fileInput) {
+          fileInput.addEventListener('change', (ev) => {
+            const f = ev.target.files && ev.target.files[0];
+            if (f) {
+              if (imgPreview) {
+                imgPreview.src = URL.createObjectURL(f);
+              } else {
+                const newImg = document.createElement('img');
+                newImg.src = URL.createObjectURL(f);
+                newImg.alt = 'preview';
+                newImg.style.width = '72px';
+                newImg.style.height = '72px';
+                newImg.style.borderRadius = '8px';
+                const wrapper = li.querySelector('.edit-member-image');
+                if (wrapper) wrapper.insertBefore(newImg, wrapper.firstChild);
+              }
+            }
+          });
+        }
+
+        const toggleCustom = () => {
+          const customCheckbox = rolesContainer.querySelector('input[type="checkbox"][value="custom"]');
+          const customSelected = customCheckbox && customCheckbox.checked;
+          const lbl = customEl.previousElementSibling;
+          if (lbl) lbl.style.display = customSelected ? 'block' : 'none';
+          customEl.style.display = customSelected ? 'block' : 'none';
+        };
+        rolesContainer.addEventListener('change', toggleCustom);
+        toggleCustom();
+
+        cancelBtn.addEventListener('click', () => {
+          li.innerHTML = originalHtml;
+          refreshMemberList();
+        });
+
+        saveBtn.addEventListener('click', async () => {
+          const selectedRoles = Array.from(rolesContainer.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value).filter(v => v !== 'custom');
+          const customVal = String(customEl.value || '').trim();
+          if (customVal) selectedRoles.push(customVal);
+          if (!selectedRoles.length) {
+            if (teamMemberStatus) {
+              teamMemberStatus.className = 'error';
+              teamMemberStatus.textContent = 'At least one role is required.';
+            }
+            return;
+          }
+          // normalize roles
+          const rolesNormalized = Array.from(new Set(selectedRoles.map(r => String(r||'').trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+          const rolesStored = rolesNormalized.join(',');
+          const gradeVal = String(li.querySelector('.edit-member-grade')?.value || '').trim() || null;
+          const bioVal = String(li.querySelector('.edit-member-bio')?.value || '').trim() || null;
+          // handle image upload if provided
+          const imageFile = li.querySelector('.edit-member-image-file')?.files?.[0] || null;
+          let imageUrlToSave = member.image_url || null;
+          if (imageFile) {
+            try {
+              imageUrlToSave = await uploadTeamMemberImage(imageFile);
+            } catch (uerr) {
+              if (teamMemberStatus) {
+                teamMemberStatus.className = 'error';
+                teamMemberStatus.textContent = `Image upload failed: ${uerr.message || uerr}`;
+              }
+              return;
+            }
+          }
+
+          const err = await updateTeamMember(member.id, { roles: rolesStored, grade: gradeVal, bio: bioVal, image_url: imageUrlToSave });
+          if (err) {
+            if (teamMemberStatus) {
+              teamMemberStatus.className = 'error';
+              teamMemberStatus.textContent = `Save failed: ${err.message}`;
+            }
+            return;
+          }
+
+          if (teamMemberStatus) {
+            teamMemberStatus.className = 'success';
+            teamMemberStatus.textContent = 'Member updated.';
+          }
+          refreshMemberList();
+        });
+      });
+    });
+  };
+
+  function formatRolesAdmin(rolesRaw) {
+    if (!rolesRaw) return '';
+    const arr = String(rolesRaw).split(',').map(s=>s.trim()).filter(Boolean);
+    if (!arr.length) return '';
+    arr.sort((a,b)=>a.localeCompare(b));
+    if (arr.length === 1) return arr[0];
+    if (arr.length === 2) return `${arr[0]} and ${arr[1]}`;
+    return `${arr.slice(0,-1).join(', ')}, and ${arr[arr.length-1]}`;
+  }
+
+  const refreshAlumniList = async () => {
+    if (!alumniList) return;
+    const alumni = await loadAlumni();
+    alumniList.innerHTML = alumni.length
+      ? `<ul>${alumni.map((a) => `
+          <li class="admin-item">
+            <strong>${escapeHtml(a.name)}</strong> — ${escapeHtml(a.role || "")} ${a.year ? `— ${escapeHtml(String(a.year))}` : ""}
+            <button type="button" class="logout-btn" data-remove-alumnus="${escapeHtml(a.id)}" style="float:right">Remove</button>
+          </li>`).join("")}</ul>`
+      : "<p>No alumni yet.</p>";
+
+    alumniList.querySelectorAll("button[data-remove-alumnus]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const err = await deleteAlumnus(btn.getAttribute("data-remove-alumnus"));
+        if (err) {
+          if (alumniStatus) {
+            alumniStatus.className = "error";
+            alumniStatus.textContent = `Remove failed: ${err.message}`;
+          }
+          return;
+        }
+        if (alumniStatus) {
+          alumniStatus.className = "success";
+          alumniStatus.textContent = "Alumnus removed.";
+        }
+        refreshAlumniList();
+      });
+    });
   };
 
   if (teamMemberList) refreshMemberList();
+  if (alumniList) refreshAlumniList();
 
   if (teamMemberForm) {
     teamMemberForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const memberName = String(document.getElementById("memberName")?.value || "").trim();
-      const memberRole = String(document.getElementById("memberRole")?.value || "").trim();
       const memberSort = Number(document.getElementById("memberSort")?.value || 1);
       const memberImageFile = document.getElementById("memberImage")?.files?.[0] || null;
       const memberImageUrlInput = String(document.getElementById("memberImageUrl")?.value || "").trim();
-      if (!memberName || !memberRole) {
+      const memberGrade = String(document.getElementById("memberGrade")?.value || "").trim();
+
+      // collect roles from checkbox list
+      const rolesContainer = document.getElementById("memberRolesList");
+      const selected = [];
+      if (rolesContainer) {
+        Array.from(rolesContainer.querySelectorAll('input[type="checkbox"]:checked')).forEach((cb) => {
+          if (cb.value === 'custom') return; // handled separately
+          selected.push(String(cb.value).trim());
+        });
+      }
+      const customRole = String(document.getElementById("memberCustomRole")?.value || "").trim();
+      if (Array.isArray(selected) && customRole) selected.push(customRole);
+
+      if (!memberName || selected.length === 0) {
         if (teamMemberStatus) {
           teamMemberStatus.className = "error";
-          teamMemberStatus.textContent = "Name and role are required.";
+          teamMemberStatus.textContent = "Name and at least one role are required.";
         }
         return;
       }
       try {
         let finalImageUrl = memberImageUrlInput;
         if (memberImageFile) finalImageUrl = await uploadTeamMemberImage(memberImageFile);
+        // normalize roles: dedupe, sort alphabetically
+        const rolesNormalized = Array.from(new Set(selected.map((r) => String(r || "").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+        const rolesStored = rolesNormalized.join(",");
+
         const insertError = await createTeamMember({
           name: memberName,
-          role: memberRole,
+          roles: rolesStored,
+          grade: memberGrade || null,
           image_url: finalImageUrl || null,
           sort_order: Number.isFinite(memberSort) ? memberSort : 1,
           is_active: true
@@ -940,6 +1226,57 @@ function renderPortalAdmin(activeTab = "pages") {
         if (teamMemberStatus) {
           teamMemberStatus.className = "error";
           teamMemberStatus.textContent = `Upload failed: ${err.message || "Unknown error"}`;
+        }
+      }
+    });
+  }
+
+  if (alumniForm) {
+    alumniForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = String(document.getElementById("alumniName")?.value || "").trim();
+      const role = String(document.getElementById("alumniRole")?.value || "").trim();
+      const year = Number(document.getElementById("alumniYear")?.value || 0) || null;
+      const sort = Number(document.getElementById("alumniSort")?.value || 1);
+      const file = document.getElementById("alumniImage")?.files?.[0] || null;
+      const imageUrlInput = String(document.getElementById("alumniImageUrl")?.value || "").trim();
+
+      if (!name) {
+        if (alumniStatus) {
+          alumniStatus.className = "error";
+          alumniStatus.textContent = "Name is required.";
+        }
+        return;
+      }
+
+      try {
+        let finalImage = imageUrlInput;
+        if (file) finalImage = await uploadTeamMemberImage(file);
+        const insertError = await createAlumnus({
+          name,
+          role: role || null,
+          year: year || null,
+          image_url: finalImage || null,
+          sort_order: Number.isFinite(sort) ? sort : 1,
+          is_active: true
+        });
+        if (insertError) {
+          if (alumniStatus) {
+            alumniStatus.className = "error";
+            alumniStatus.textContent = `Add failed: ${insertError.message}`;
+          }
+          return;
+        }
+        alumniForm.reset();
+        if (alumniStatus) {
+          alumniStatus.className = "success";
+          alumniStatus.textContent = "Alumnus added.";
+        }
+        refreshAlumniList();
+      } catch (err) {
+        if (alumniStatus) {
+          alumniStatus.className = "error";
+          alumniStatus.textContent = `Upload failed: ${err.message || "Unknown error"}`;
         }
       }
     });
@@ -1151,9 +1488,101 @@ if (backToLandingBtn) {
   backToLandingBtn.addEventListener("click", showLanding);
 }
 
+function updateAccountUiApp() {
+  const accountBtn = document.getElementById("accountBtn");
+  const accountDropdown = document.getElementById("accountDropdown");
+  const teamMenuBtn = document.getElementById("teamMenuBtn");
+  const accountLogoutBtn = document.getElementById("accountLogoutBtn");
+
+  if (!accountBtn) return;
+
+  if (currentUser) {
+    accountBtn.textContent = currentProfile.displayName ? "My Account" : "My Account";
+    accountBtn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (accountDropdown) accountDropdown.classList.toggle("hidden");
+    };
+
+    if (teamMenuBtn) {
+      teamMenuBtn.onclick = () => {
+        // Show the in-app team menu
+        showApp(currentProfile.displayName, currentProfile.isCoach, currentProfile.isPortalAdmin);
+        if (accountDropdown) accountDropdown.classList.add("hidden");
+      };
+    }
+
+    if (accountLogoutBtn) {
+      accountLogoutBtn.onclick = async () => {
+        await onLogout();
+        if (accountDropdown) accountDropdown.classList.add("hidden");
+      };
+    }
+  } else {
+    accountBtn.textContent = "Login";
+    accountBtn.onclick = (e) => {
+      e.preventDefault();
+      showLogin("login");
+    };
+    if (accountDropdown) accountDropdown.classList.add("hidden");
+  }
+
+  if (!_appAccountDocListenerAdded) {
+    document.addEventListener("click", () => {
+      const dd = document.getElementById("accountDropdown");
+      if (dd && !dd.classList.contains("hidden")) dd.classList.add("hidden");
+    });
+    _appAccountDocListenerAdded = true;
+  }
+}
+
+function initAccountNavApp() {
+  // If header has account nav, wire it up and respond to auth changes
+  if (!supabaseClient || !window.supabase) return;
+  if (supabaseClient.auth && supabaseClient.auth.onAuthStateChange) {
+    supabaseClient.auth.onAuthStateChange(() => {
+      // refresh session info
+      restoreSession().then(() => updateAccountUiApp());
+    });
+  }
+  updateAccountUiApp();
+}
+
+function initThemeToggleApp() {
+  const navList = document.querySelector('.top-nav-list');
+  if (!navList) return;
+
+  // avoid duplicate
+  if (document.getElementById('themeToggleBtn')) return;
+
+  const li = document.createElement('li');
+  li.innerHTML = `<a id="themeToggleBtn" class="theme-toggle" href="#" aria-label="Toggle theme"><span class="toggle-switch"><svg class="icon sun" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4"/></svg><svg class="icon moon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg><span class="toggle-knob" aria-hidden="true"></span></span></a>`;
+  // add to start of right-side items (append to end)
+  navList.appendChild(li);
+
+  const themeToggle = document.getElementById('themeToggleBtn');
+  function applyStoredTheme() {
+    const t = localStorage.getItem('site-theme') || 'light';
+    const isDark = t === 'dark';
+    if (isDark) document.documentElement.classList.add('dark-theme');
+    else document.documentElement.classList.remove('dark-theme');
+    if (themeToggle) themeToggle.classList.toggle('is-dark', isDark);
+  }
+  applyStoredTheme();
+  if (themeToggle) {
+    themeToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      const isDark = document.documentElement.classList.toggle('dark-theme');
+      localStorage.setItem('site-theme', isDark ? 'dark' : 'light');
+      themeToggle.classList.toggle('is-dark', isDark);
+    });
+  }
+}
+
 if (loginForm) {
   setMode("login");
   setRetryButtonVisible(false);
   initSupabase();
-  restoreSession();
+  initThemeToggleApp();
+  restoreSession().then(() => initAccountNavApp());
 }
