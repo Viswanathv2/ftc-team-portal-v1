@@ -67,8 +67,6 @@ const PORTAL_PAGE_DEFS = [
   {
     slug: "sponsorship",
     label: "Sponsorship Needed",
-    defaultTitle: "Sponsorship Opportunities",
-    defaultSubtitle: "Partner with Team 25795 - Architechs",
     defaultBody: "Architechs is actively seeking sponsorship from local businesses and community organizations.",
     defaultContactEmail: "ftc25795@gmail.com"
   }
@@ -387,6 +385,11 @@ function safeNameFromEmail(email) {
   return String(email || "Member").split("@")[0] || "Member";
 }
 
+function getOptionalPortalDefault(def, fieldName) {
+  const value = def?.[fieldName];
+  return typeof value === "string" ? value : "";
+}
+
 function mapPortalPageRows(rows) {
   const bySlug = new Map((rows || []).map((row) => [row.slug, row]));
   return PORTAL_PAGE_DEFS.map((def) => {
@@ -394,9 +397,9 @@ function mapPortalPageRows(rows) {
     return {
       slug: def.slug,
       label: def.label,
-      title: row.title || def.defaultTitle,
-      subtitle: row.subtitle || def.defaultSubtitle,
-      body: row.body || def.defaultBody,
+      title: row.title || getOptionalPortalDefault(def, "defaultTitle"),
+      subtitle: row.subtitle || getOptionalPortalDefault(def, "defaultSubtitle"),
+      body: row.body || getOptionalPortalDefault(def, "defaultBody"),
       contactEmail: row.contact_email || def.defaultContactEmail || ""
     };
   });
@@ -771,11 +774,11 @@ function renderPortalAdmin(activeTab = "pages") {
             <summary class="admin-collapsible-summary">${escapeHtml(def.label)}</summary>
             <div class="admin-collapsible-body">
               <label for="page-title-${escapeHtml(def.slug)}">Page Title</label>
-              <input id="page-title-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="title" value="${escapeHtml(def.defaultTitle)}" />
+              <input id="page-title-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="title" value="${escapeHtml(getOptionalPortalDefault(def, "defaultTitle"))}" />
               <label for="page-subtitle-${escapeHtml(def.slug)}">Subtitle</label>
-              <input id="page-subtitle-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="subtitle" value="${escapeHtml(def.defaultSubtitle)}" />
+              <input id="page-subtitle-${escapeHtml(def.slug)}" type="text" data-page="${escapeHtml(def.slug)}" data-field="subtitle" value="${escapeHtml(getOptionalPortalDefault(def, "defaultSubtitle"))}" />
               <label for="page-body-${escapeHtml(def.slug)}">Body Text</label>
-              <textarea id="page-body-${escapeHtml(def.slug)}" data-page="${escapeHtml(def.slug)}" data-field="body">${escapeHtml(def.defaultBody)}</textarea>
+              <textarea id="page-body-${escapeHtml(def.slug)}" data-page="${escapeHtml(def.slug)}" data-field="body">${escapeHtml(getOptionalPortalDefault(def, "defaultBody"))}</textarea>
               ${def.slug === "sponsorship" ? `
                 <label for="page-contact-${escapeHtml(def.slug)}">Contact Email</label>
                 <input id="page-contact-${escapeHtml(def.slug)}" type="email" data-page="${escapeHtml(def.slug)}" data-field="contactEmail" value="${escapeHtml(def.defaultContactEmail || "")}" />
@@ -804,7 +807,7 @@ function renderPortalAdmin(activeTab = "pages") {
               <label><input type="checkbox" value="3D Designer" /> 3D Designer</label>
               <label><input type="checkbox" value="Outreach Management" /> Outreach Management</label>
               <label><input type="checkbox" value="Engineering Portfolio Crew" /> Engineering Portfolio Crew</label>
-              <label><input type="checkbox" value="custom" /> Custom role...</label>
+              <label><input type="checkbox" value="Custom" /> Custom role...</label>
             </div>
             <label for="memberCustomRole" class="hidden">Custom Role</label>
             <input id="memberCustomRole" type="text" placeholder="Custom role" />
@@ -925,9 +928,9 @@ function renderPortalAdmin(activeTab = "pages") {
       }
       const updates = PORTAL_PAGE_DEFS.map((def) => ({
         slug: def.slug,
-        title: String(document.getElementById(`page-title-${def.slug}`)?.value || "").trim() || def.defaultTitle,
-        subtitle: String(document.getElementById(`page-subtitle-${def.slug}`)?.value || "").trim() || def.defaultSubtitle,
-        body: String(document.getElementById(`page-body-${def.slug}`)?.value || "").trim() || def.defaultBody,
+        title: String(document.getElementById(`page-title-${def.slug}`)?.value || "").trim() || getOptionalPortalDefault(def, "defaultTitle"),
+        subtitle: String(document.getElementById(`page-subtitle-${def.slug}`)?.value || "").trim() || getOptionalPortalDefault(def, "defaultSubtitle"),
+        body: String(document.getElementById(`page-body-${def.slug}`)?.value || "").trim() || getOptionalPortalDefault(def, "defaultBody"),
         contactEmail: String(document.getElementById(`page-contact-${def.slug}`)?.value || "").trim() || null
       }));
       const error = await savePortalPages(updates);
@@ -1003,7 +1006,7 @@ function renderPortalAdmin(activeTab = "pages") {
         if (!li) return;
         const originalHtml = li.innerHTML;
 
-        const rolesOptions = ["Drive Team","Programmer","Builder","3D Designer","Outreach Management","Engineering Portfolio Crew","custom"];
+        const rolesOptions = ["Drive Team","Programmer","Builder","3D Designer","Outreach Management","Engineering Portfolio Crew","Custom"];
         const rolesArr = String(member.roles || "").split(',').map(s=>s.trim()).filter(Boolean);
 
         li.innerHTML = `

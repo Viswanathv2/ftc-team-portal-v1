@@ -23,6 +23,40 @@ This is a beginner-friendly website for FTC team members.
 3. **Login/Register Page** (`login.html`) - Authentication controls on a dedicated page
 4. **Dashboard** (Post-login) - Personalized menu + coach admin features
 
+## React SPA Migration (Option 1 Started)
+
+A new React + Vite SPA has been scaffolded in:
+
+- `spa/`
+
+### What is already migrated in `spa/`
+
+- Routed public pages: Home, Team Story, Meet the Team, Schedule, Sponsorship, Resources, Feedback
+- Shared top navigation with active states
+- Supabase-backed page content loading (`portal_pages`)
+- Supabase-backed team/alumni loading (`team_members`, `alumni`)
+- Supabase-backed feedback list + submission (`feedback`)
+- Page visit tracking (`page_visits`)
+- Theme toggle and smoother route transitions
+
+### Login and dashboard status
+
+- The SPA `/login` route now has native Supabase login/register (with rate-limit cooldown handling)
+- The SPA `/dashboard` route is protected and requires authentication
+- The SPA `/admin` route provides coach/portal admin tools (menu editor, portal pages editor, team/alumni management)
+- Navigation now shows `Login` for guests and `My Account` + `Log Out` for signed-in users
+- Coach/Admin role detection is active in the SPA dashboard baseline
+
+### Run the new SPA locally
+
+```bash
+cd team-portal/spa
+npm install
+npm run dev
+```
+
+Then open: `http://localhost:5173/`
+
 ## Public Pages Structure
 
 - `index.html`: home page with intro + quick links
@@ -44,7 +78,25 @@ Use **Portal Admin** from the dashboard after login:
 - Review page visit counts
 - Export feedback to `portal-feedback.csv`
 - Export visit analytics to `portal-visits.csv`
+### Admin Dashboard (SPA)
 
+The SPA dashboard includes admin tools for coaches and portal admins:
+
+**Coaches:**
+- Edit menu items displayed on the team dashboard (announcements, schedule, resources, checklist)
+
+**Portal Admins:** (all coach permissions plus)
+- Edit all portal page content (home, about, team, schedule, sponsorship, resources)
+- Manage team members (add/edit/delete with roles, grades, bios)
+- Manage alumni (add/edit/delete with years, bios)
+- View page visit analytics (unique visitor counts per page)
+- Review and export visitor feedback to CSV
+
+Access admin tools by:
+1. Log in to the SPA at `/login`
+2. Go to dashboard at `/dashboard`
+3. Click **⚙️ Admin Settings** in the sidebar (only visible for coaches/admins)
+4. Or navigate directly to `/admin`
 ## How to Add Images
 
 1. Place image files in `assets/images/` folder:
