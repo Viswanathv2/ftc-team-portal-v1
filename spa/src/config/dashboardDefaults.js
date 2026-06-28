@@ -6,7 +6,7 @@ export const defaultNavItems = [
   },
   {
     id: "schedule",
-    title: "Build Schedule",
+    title: "Team Activities",
     content: "Add this week's goals and who is working on each task."
   },
   {

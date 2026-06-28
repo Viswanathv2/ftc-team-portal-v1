@@ -34,6 +34,11 @@ export const portalDefaults = {
     title: "Feedback",
     subtitle: "Share your thoughts about Team 25795 - Architechs",
     body: "We welcome feedback from team members, visitors, sponsors, and community members!"
+  },
+  join: {
+    title: "FTC Team Interest Form",
+    subtitle:
+      "Thank you for your interest in the FTC team. Please choose the option below that best matches your current need."
   }
 };
 
@@ -41,8 +46,8 @@ export const navItems = [
   { to: "/", label: "Home" },
   { to: "/about", label: "Team Story" },
   { to: "/team", label: "Meet the Team" },
-  { to: "/schedule", label: "Schedule" },
   { to: "/sponsorship", label: "Sponsors" },
   { to: "/resources", label: "Resources" },
+  { to: "/join", label: "Join Us" },
   { to: "/feedback", label: "Feedback" }
 ];

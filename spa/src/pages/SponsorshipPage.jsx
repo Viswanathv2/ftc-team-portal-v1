@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import emailjs from "@emailjs/browser";
 import RouteLoading from "../components/RouteLoading";
 import { usePortalPage } from "../hooks/usePortalPage";
 import { useTrackVisit } from "../hooks/useTrackVisit";
+import { supabase } from "../lib/supabase";
 import {
   EMAILJS_SERVICE_ID,
   EMAILJS_TEMPLATE_ID,
@@ -15,6 +16,7 @@ const SPONSOR_EMAIL = "viswanathv2@gmail.com";
 export default function SponsorshipPage() {
   const page = usePortalPage("sponsorship");
   useTrackVisit("sponsorship");
+  const [sponsors, setSponsors] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
@@ -26,6 +28,22 @@ export default function SponsorshipPage() {
     level: "",
     message: ""
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadSponsors() {
+      const { data } = await supabase
+        .from("sponsors")
+        .select("id,name,website_url,statement,logo_url,sort_order")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (isMounted) setSponsors(Array.isArray(data) ? data : []);
+    }
+    loadSponsors();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function update(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -110,6 +128,48 @@ export default function SponsorshipPage() {
             Architechs is powered by the generosity of our sponsors. Their investment funds
             components, travel, registration fees, and our outreach programs.
           </p>
+
+          {sponsors.length ? (
+            <div className="current-sponsors">
+              <h3>Our Sponsors</h3>
+              <p className="current-sponsors-lead">
+                We are deeply grateful to the partners who believe in our students and make our
+                season possible. Thank you for fueling curiosity, teamwork, and engineering.
+              </p>
+              <div className="sponsor-grid">
+                {sponsors.map((s) => {
+                  const card = (
+                    <>
+                      <div className="sponsor-card-logo">
+                        {s.logo_url ? (
+                          <img src={s.logo_url} alt={s.name} loading="lazy" />
+                        ) : (
+                          <span className="sponsor-card-initial">{s.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="sponsor-card-name">{s.name}</div>
+                      {s.statement ? <p className="sponsor-card-statement">{s.statement}</p> : null}
+                    </>
+                  );
+                  return s.website_url ? (
+                    <a
+                      key={s.id}
+                      className="sponsor-card"
+                      href={s.website_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {card}
+                    </a>
+                  ) : (
+                    <div key={s.id} className="sponsor-card">
+                      {card}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
 
           <div className="sponsorship-levels">
             <h3>Sponsorship Levels</h3>

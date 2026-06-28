@@ -10,12 +10,14 @@ export default function FeedbackPage() {
   const [status, setStatus] = useState("");
   const [statusType, setStatusType] = useState("success");
   const [list, setList] = useState([]);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [form, setForm] = useState({ page: "general", name: "", email: "", comment: "" });
 
   async function loadFeedback() {
     const { data } = await supabase
       .from("feedback")
       .select("id,page_slug,name,email,comment,created_at")
+      .eq("is_approved", true)
       .order("created_at", { ascending: false })
       .limit(20);
 
@@ -75,8 +77,8 @@ export default function FeedbackPage() {
               <option value="home">Home</option>
               <option value="about">Team Story</option>
               <option value="team">Meet the Team</option>
-              <option value="schedule">Schedule</option>
-              <option value="sponsorship">Sponsorship</option>
+              {/* <option value="schedule">Schedule</option> */}
+              <option value="sponsors">Sponsors</option>
               <option value="resources">Resources</option>
             </select>
             <label htmlFor="fbName">Your Name</label>
@@ -90,15 +92,26 @@ export default function FeedbackPage() {
           </form>
         </section>
         <section className="landing-section">
-          <h2>Recent Comments</h2>
-          <div>
-            {list.length ? list.map((item) => (
-              <article className="feedback-item" key={item.id}>
-                <p><strong>{item.name || "Guest"}</strong> - <em>{item.page_slug || "general"}</em></p>
-                <p>{item.comment || ""}</p>
-              </article>
-            )) : <p>No feedback yet.</p>}
-          </div>
+          <button
+            type="button"
+            className="announcements-toggle"
+            onClick={() => setCommentsOpen((v) => !v)}
+            aria-expanded={commentsOpen}
+          >
+            <span className="announcements-caret">{commentsOpen ? "\u25BE" : "\u25B8"}</span>
+            Recent Comments
+            {list.length ? <span className="announcements-count">{list.length}</span> : null}
+          </button>
+          {commentsOpen && (
+            <div>
+              {list.length ? list.map((item) => (
+                <article className="feedback-item" key={item.id}>
+                  <p><strong>{item.name || "Guest"}</strong> - <em>{item.page_slug || "general"}</em></p>
+                  <p>{item.comment || ""}</p>
+                </article>
+              )) : <p>No feedback yet.</p>}
+            </div>
+          )}
         </section>
       </div>
     </section>

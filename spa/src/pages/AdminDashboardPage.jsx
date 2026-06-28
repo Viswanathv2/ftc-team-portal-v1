@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
-import MenuEditorTab from "../components/admin/MenuEditorTab";
-import PortalPagesEditorTab from "../components/admin/PortalPagesEditorTab";
-import TeamMembersAdminTab from "../components/admin/TeamMembersAdminTab";
-import StaffAdminTab from "../components/admin/StaffAdminTab";
+import PeopleAdminTab from "../components/admin/PeopleAdminTab";
 import EventsAdminTab from "../components/admin/EventsAdminTab";
-import AlumniAdminTab from "../components/admin/AlumniAdminTab";
 import VisitAnalyticsTab from "../components/admin/VisitAnalyticsTab";
 import FeedbackTab from "../components/admin/FeedbackTab";
+import InterestRequestsTab from "../components/admin/InterestRequestsTab";
+import AnnouncementsAdminTab from "../components/admin/AnnouncementsAdminTab";
+import SponsorsAdminTab from "../components/admin/SponsorsAdminTab";
 
 export default function AdminDashboardPage() {
   const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState("menu");
+  const [activeTab, setActiveTab] = useState("interest");
 
   // Only coaches and portal admins can access
   if (!user || (!profile.isCoach && !profile.isPortalAdmin)) {
@@ -23,47 +22,41 @@ export default function AdminDashboardPage() {
     <section className="admin-dashboard-page">
       <header className="admin-header">
         <h1>Admin Dashboard</h1>
-        <p>Manage menu items, pages, team members, and alumni</p>
+        <p>Manage requests, announcements, the team story, sponsors, and people</p>
       </header>
 
       <div className="admin-tabs">
         <button
-          className={`admin-tab-btn ${activeTab === "menu" ? "active" : ""}`}
-          onClick={() => setActiveTab("menu")}
+          className={`admin-tab-btn ${activeTab === "interest" ? "active" : ""}`}
+          onClick={() => setActiveTab("interest")}
         >
-          Menu Items {profile.isCoach ? "(Coach)" : ""}
+          Interest Requests
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === "announcements" ? "active" : ""}`}
+          onClick={() => setActiveTab("announcements")}
+        >
+          Announcements
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === "story" ? "active" : ""}`}
+          onClick={() => setActiveTab("story")}
+        >
+          Team Story
+        </button>
+        <button
+          className={`admin-tab-btn ${activeTab === "sponsors" ? "active" : ""}`}
+          onClick={() => setActiveTab("sponsors")}
+        >
+          Sponsors
         </button>
         {profile.isPortalAdmin && (
           <>
             <button
-              className={`admin-tab-btn ${activeTab === "pages" ? "active" : ""}`}
-              onClick={() => setActiveTab("pages")}
+              className={`admin-tab-btn ${activeTab === "people" ? "active" : ""}`}
+              onClick={() => setActiveTab("people")}
             >
-              Portal Pages
-            </button>
-            <button
-              className={`admin-tab-btn ${activeTab === "team" ? "active" : ""}`}
-              onClick={() => setActiveTab("team")}
-            >
-              Team Members
-            </button>
-            <button
-              className={`admin-tab-btn ${activeTab === "staff" ? "active" : ""}`}
-              onClick={() => setActiveTab("staff")}
-            >
-              Coaches &amp; Mentors
-            </button>
-            <button
-              className={`admin-tab-btn ${activeTab === "alumni" ? "active" : ""}`}
-              onClick={() => setActiveTab("alumni")}
-            >
-              Alumni
-            </button>
-            <button
-              className={`admin-tab-btn ${activeTab === "story" ? "active" : ""}`}
-              onClick={() => setActiveTab("story")}
-            >
-              Team Story
+              People
             </button>
             <button
               className={`admin-tab-btn ${activeTab === "visits" ? "active" : ""}`}
@@ -82,12 +75,11 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="admin-content">
-        {activeTab === "menu" && <MenuEditorTab isCoach={profile.isCoach} />}
-        {activeTab === "pages" && profile.isPortalAdmin && <PortalPagesEditorTab />}
-        {activeTab === "team" && profile.isPortalAdmin && <TeamMembersAdminTab />}
-        {activeTab === "staff" && profile.isPortalAdmin && <StaffAdminTab />}
-        {activeTab === "alumni" && profile.isPortalAdmin && <AlumniAdminTab />}
-        {activeTab === "story" && profile.isPortalAdmin && <EventsAdminTab />}
+        {activeTab === "interest" && <InterestRequestsTab />}
+        {activeTab === "announcements" && <AnnouncementsAdminTab />}
+        {activeTab === "story" && <EventsAdminTab />}
+        {activeTab === "sponsors" && <SponsorsAdminTab />}
+        {activeTab === "people" && profile.isPortalAdmin && <PeopleAdminTab />}
         {activeTab === "visits" && profile.isPortalAdmin && <VisitAnalyticsTab />}
         {activeTab === "feedback" && profile.isPortalAdmin && <FeedbackTab />}
       </div>

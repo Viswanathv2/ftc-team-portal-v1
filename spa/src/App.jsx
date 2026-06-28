@@ -7,10 +7,13 @@ import SchedulePage from "./pages/SchedulePage";
 import SponsorshipPage from "./pages/SponsorshipPage";
 import ResourcesPage from "./pages/ResourcesPage";
 import FeedbackPage from "./pages/FeedbackPage";
+import JoinPage from "./pages/JoinPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DashboardPage from "./pages/DashboardPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import ProfilePage from "./pages/ProfilePage";
+import LearningResourcesPage from "./pages/LearningResourcesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -23,9 +26,17 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="about" element={<AboutPage />} />
             <Route path="team" element={<TeamPage />} />
-            <Route path="schedule" element={<SchedulePage />} />
+            <Route
+              path="schedule"
+              element={(
+                <ProtectedRoute>
+                  <SchedulePage />
+                </ProtectedRoute>
+              )}
+            />
             <Route path="sponsorship" element={<SponsorshipPage />} />
             <Route path="resources" element={<ResourcesPage />} />
+            <Route path="join" element={<JoinPage />} />
             <Route path="feedback" element={<FeedbackPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route
@@ -41,6 +52,22 @@ function App() {
               element={(
                 <ProtectedRoute>
                   <AdminDashboardPage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="profile"
+              element={(
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="learning"
+              element={(
+                <ProtectedRoute>
+                  <LearningResourcesPage />
                 </ProtectedRoute>
               )}
             />

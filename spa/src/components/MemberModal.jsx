@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Lightbox from "./Lightbox";
 import "./MemberModal.css";
 
 function roleClass(role) {
@@ -21,6 +22,8 @@ function rolesToList(value) {
 const DEFAULT_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 120'%3E%3Crect width='90' height='120' fill='%23e5e8f0'/%3E%3Ccircle cx='45' cy='44' r='20' fill='%23a8aec4'/%3E%3Cpath d='M 12 110 Q 12 78 45 78 Q 78 78 78 110 L 78 120 L 12 120 Z' fill='%23a8aec4'/%3E%3C/svg%3E";
 
 export default function MemberModal({ isOpen, member, onClose }) {
+  const [showPhoto, setShowPhoto] = useState(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -57,6 +60,8 @@ export default function MemberModal({ isOpen, member, onClose }) {
             src={member.image || DEFAULT_IMAGE}
             alt={member.name}
             onError={(e) => (e.target.src = DEFAULT_IMAGE)}
+            onClick={() => member.image && setShowPhoto(true)}
+            style={member.image ? { cursor: "zoom-in" } : undefined}
           />
         </div>
         <div className="member-body">
@@ -80,6 +85,14 @@ export default function MemberModal({ isOpen, member, onClose }) {
           </div>
         </div>
       </div>
+      {showPhoto ? (
+        <Lightbox
+          items={[{ url: member.image, type: "image", title: member.name, caption: member.role }]}
+          index={0}
+          onClose={() => setShowPhoto(false)}
+          onIndex={() => {}}
+        />
+      ) : null}
     </div>
   );
 }

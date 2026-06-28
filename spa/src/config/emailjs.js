@@ -17,6 +17,11 @@ export const EMAILJS_TEMPLATE_ID =
 export const EMAILJS_PUBLIC_KEY =
   import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "YOUR_PUBLIC_KEY";
 
+// Optional dedicated template for the Join / Onboard interest form. Falls back
+// to the sponsor template when not set.
+export const EMAILJS_INTEREST_TEMPLATE_ID =
+  import.meta.env.VITE_EMAILJS_INTEREST_TEMPLATE_ID || EMAILJS_TEMPLATE_ID;
+
 // True only when all three values have been filled in with real credentials.
 export const emailjsConfigured =
   EMAILJS_SERVICE_ID !== "YOUR_SERVICE_ID" &&

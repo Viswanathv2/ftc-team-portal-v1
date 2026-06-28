@@ -2,17 +2,38 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 const EVENT_TYPES = [
-  { value: "game", label: "Game" },
-  { value: "party", label: "Party" },
+  { value: "game", label: "Match" },
+  { value: "party", label: "Team Fun" },
   { value: "outreach", label: "Outreach" },
-  { value: "workout", label: "Workout Session" },
+  { value: "workout", label: "Brainstorming" },
   { value: "design", label: "Design" },
   { value: "other", label: "Other" }
 ];
 
 const BUCKET = "event-media";
 const emptyMedia = { title: "", event_type: "game", event_date: "", caption: "" };
-const emptyAchv = { season: "", event_name: "", event_date: "", location: "", score: "", result: "" };
+const emptyAchv = {
+  season: "",
+  event_name: "",
+  event_date: "",
+  location: "",
+  result: "",
+  matches_played: "",
+  matches_won: "",
+  highest_score: "",
+  overall_rank: "",
+  media: []
+};
+
+// Older achievements may only have the single media_url columns. Normalize
+// both shapes into one array of { url, type, path } objects.
+function toMediaArray(a) {
+  if (Array.isArray(a?.media) && a.media.length) return a.media;
+  if (a?.media_url) {
+    return [{ url: a.media_url, type: a.media_type || "image", path: a.storage_path || "" }];
+  }
+  return [];
+}
 
 export default function EventsAdminTab() {
   const [section, setSection] = useState("media");
@@ -26,6 +47,8 @@ export default function EventsAdminTab() {
   // ---- Achievements state -------------------------------------------------
   const [achievements, setAchievements] = useState([]);
   const [achvForm, setAchvForm] = useState(emptyAchv);
+  const [editingAchvId, setEditingAchvId] = useState(null);
+  const [achvUploading, setAchvUploading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: "", message: "" });
@@ -112,27 +135,123 @@ export default function EventsAdminTab() {
   }
 
   // ---- Achievements -------------------------------------------------------
-  async function addAchievement() {
+  async function uploadOneFile(file) {
+    const ext = file.name.split(".").pop();
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const path = `achievements/${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+    if (uploadError) throw uploadError;
+    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const type = file.type.startsWith("video") ? "video" : "image";
+    return { url: publicData.publicUrl, type, path };
+  }
+
+  // Upload the chosen files immediately and append them to the form's media list.
+  async function addAchvMediaFiles(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setAchvUploading(true);
+    setStatus({ type: "", message: "" });
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        uploaded.push(await uploadOneFile(file));
+      }
+      setAchvForm((p) => ({ ...p, media: [...p.media, ...uploaded] }));
+    } catch (err) {
+      setStatus({ type: "error", message: `Upload failed: ${err.message}` });
+    }
+    setAchvUploading(false);
+  }
+
+  async function removeAchvMediaItem(index) {
+    const item = achvForm.media[index];
+    if (item?.path) {
+      await supabase.storage.from(BUCKET).remove([item.path]);
+    }
+    setAchvForm((p) => ({ ...p, media: p.media.filter((_, i) => i !== index) }));
+  }
+
+  function startEditAchievement(a) {
+    setEditingAchvId(a.id);
+    setAchvForm({
+      season: a.season || "",
+      event_name: a.event_name || "",
+      event_date: a.event_date || "",
+      location: a.location || "",
+      result: a.result || "",
+      matches_played: a.matches_played ?? "",
+      matches_won: a.matches_won ?? "",
+      highest_score: a.highest_score || "",
+      overall_rank: a.overall_rank || "",
+      media: toMediaArray(a)
+    });
+    setStatus({ type: "", message: "" });
+  }
+
+  function cancelEditAchievement() {
+    setEditingAchvId(null);
+    setAchvForm(emptyAchv);
+  }
+
+  async function saveAchievement() {
     if (!achvForm.season.trim() || !achvForm.event_name.trim()) {
       setStatus({ type: "error", message: "Season and event name are required" });
       return;
     }
-    const { error } = await supabase.from("achievements").insert({ ...achvForm });
+    setAchvUploading(true);
+    setStatus({ type: "", message: "" });
+
+    const media = achvForm.media;
+    const first = media[0] || null;
+    const payload = {
+      season: achvForm.season,
+      event_name: achvForm.event_name,
+      event_date: achvForm.event_date || null,
+      location: achvForm.location || null,
+      result: achvForm.result || null,
+      matches_played: achvForm.matches_played === "" ? null : Number(achvForm.matches_played),
+      matches_won: achvForm.matches_won === "" ? null : Number(achvForm.matches_won),
+      highest_score: achvForm.highest_score.trim() || null,
+      overall_rank: achvForm.overall_rank.trim() || null,
+      media,
+      // keep the single columns in sync (first item) for backward compatibility
+      media_url: first ? first.url : null,
+      media_type: first ? first.type : null,
+      storage_path: first ? first.path : null
+    };
+
+    let error;
+    if (editingAchvId) {
+      ({ error } = await supabase.from("achievements").update(payload).eq("id", editingAchvId));
+    } else {
+      ({ error } = await supabase.from("achievements").insert(payload));
+    }
+
     if (error) {
       setStatus({ type: "error", message: `Failed: ${error.message}` });
     } else {
-      setAchvForm(emptyAchv);
-      setStatus({ type: "success", message: "Achievement added!" });
+      setStatus({ type: "success", message: editingAchvId ? "Achievement updated!" : "Achievement added!" });
+      cancelEditAchievement();
       loadAll();
     }
+    setAchvUploading(false);
   }
 
-  async function deleteAchievement(id) {
+  async function deleteAchievement(item) {
     if (!confirm("Delete this achievement?")) return;
-    const { error } = await supabase.from("achievements").delete().eq("id", id);
+    const paths = toMediaArray(item).map((m) => m.path).filter(Boolean);
+    if (paths.length) {
+      await supabase.storage.from(BUCKET).remove(paths);
+    }
+    const { error } = await supabase.from("achievements").delete().eq("id", item.id);
     if (error) {
       setStatus({ type: "error", message: `Failed: ${error.message}` });
     } else {
+      if (editingAchvId === item.id) cancelEditAchievement();
       setStatus({ type: "success", message: "Achievement deleted!" });
       loadAll();
     }
@@ -221,7 +340,7 @@ export default function EventsAdminTab() {
       ) : (
         <>
           <div className="admin-form">
-            <h3>Add Achievement</h3>
+            <h3>{editingAchvId ? "Edit Achievement" : "Add Achievement"}</h3>
             <label htmlFor="achvSeason">Season</label>
             <input id="achvSeason" placeholder="e.g. 2024-25" value={achvForm.season} onChange={(e) => setAchvForm((p) => ({ ...p, season: e.target.value }))} />
 
@@ -229,18 +348,66 @@ export default function EventsAdminTab() {
             <input id="achvEvent" value={achvForm.event_name} onChange={(e) => setAchvForm((p) => ({ ...p, event_name: e.target.value }))} />
 
             <label htmlFor="achvDate">Date</label>
-            <input id="achvDate" placeholder="e.g. Dec 14, 2024" value={achvForm.event_date} onChange={(e) => setAchvForm((p) => ({ ...p, event_date: e.target.value }))} />
+            <input id="achvDate" type="date" value={achvForm.event_date} onChange={(e) => setAchvForm((p) => ({ ...p, event_date: e.target.value }))} />
 
             <label htmlFor="achvLocation">Location</label>
             <input id="achvLocation" value={achvForm.location} onChange={(e) => setAchvForm((p) => ({ ...p, location: e.target.value }))} />
 
-            <label htmlFor="achvScore">Score</label>
-            <input id="achvScore" placeholder="e.g. 185 pts" value={achvForm.score} onChange={(e) => setAchvForm((p) => ({ ...p, score: e.target.value }))} />
-
             <label htmlFor="achvResult">Result / Award</label>
             <input id="achvResult" placeholder="e.g. 2nd Place / Inspire Award" value={achvForm.result} onChange={(e) => setAchvForm((p) => ({ ...p, result: e.target.value }))} />
 
-            <button className="admin-save-btn" onClick={addAchievement}>Add Achievement</button>
+            <label htmlFor="achvMatchesPlayed">Matches Played (optional)</label>
+            <input id="achvMatchesPlayed" type="number" min="0" placeholder="e.g. 10" value={achvForm.matches_played} onChange={(e) => setAchvForm((p) => ({ ...p, matches_played: e.target.value }))} />
+
+            <label htmlFor="achvMatchesWon">Matches Won (optional)</label>
+            <input id="achvMatchesWon" type="number" min="0" placeholder="e.g. 7" value={achvForm.matches_won} onChange={(e) => setAchvForm((p) => ({ ...p, matches_won: e.target.value }))} />
+
+            <label htmlFor="achvHighestScore">Highest Score (optional)</label>
+            <input id="achvHighestScore" placeholder="e.g. 220 pts" value={achvForm.highest_score} onChange={(e) => setAchvForm((p) => ({ ...p, highest_score: e.target.value }))} />
+
+            <label htmlFor="achvOverallRank">Overall Rank (optional)</label>
+            <input id="achvOverallRank" placeholder="e.g. 3rd of 24" value={achvForm.overall_rank} onChange={(e) => setAchvForm((p) => ({ ...p, overall_rank: e.target.value }))} />
+
+            <label htmlFor="achvMedia">Photos / Videos (optional &mdash; add as many as you like; they show on hover)</label>
+            {achvForm.media.length ? (
+              <div className="achv-media-thumbs">
+                {achvForm.media.map((m, i) => (
+                  <div key={`${m.url}-${i}`} className="achv-media-thumb">
+                    {m.type === "video" ? (
+                      <video src={m.url} muted />
+                    ) : (
+                      <img src={m.url} alt={`media ${i + 1}`} />
+                    )}
+                    <button
+                      type="button"
+                      className="achv-media-thumb-remove"
+                      onClick={() => removeAchvMediaItem(i)}
+                      aria-label="Remove"
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <input
+              id="achvMedia"
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={addAchvMediaFiles}
+              disabled={achvUploading}
+            />
+
+            <div className="admin-form-actions">
+              <button className="admin-save-btn" onClick={saveAchievement} disabled={achvUploading}>
+                {achvUploading ? "Saving\u2026" : editingAchvId ? "Save Changes" : "Add Achievement"}
+              </button>
+              {editingAchvId ? (
+                <button className="admin-cancel-btn" onClick={cancelEditAchievement}>Cancel</button>
+              ) : null}
+            </div>
           </div>
 
           <div className="members-list">
@@ -254,8 +421,11 @@ export default function EventsAdminTab() {
                     <th>Season</th>
                     <th>Event</th>
                     <th>Date</th>
-                    <th>Score</th>
                     <th>Result</th>
+                    <th>Matches (W/P)</th>
+                    <th>High</th>
+                    <th>Rank</th>
+                    <th>Media</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -265,10 +435,20 @@ export default function EventsAdminTab() {
                       <td>{a.season}</td>
                       <td>{a.event_name}</td>
                       <td>{a.event_date || "-"}</td>
-                      <td>{a.score || "-"}</td>
                       <td>{a.result || "-"}</td>
                       <td>
-                        <button className="admin-delete-btn" onClick={() => deleteAchievement(a.id)}>Delete</button>
+                        {a.matches_won != null || a.matches_played != null
+                          ? `${a.matches_won ?? "-"}/${a.matches_played ?? "-"}`
+                          : "-"}
+                      </td>
+                      <td>{a.highest_score || "-"}</td>
+                      <td>{a.overall_rank || "-"}</td>
+                      <td>
+                        {toMediaArray(a).length ? `${toMediaArray(a).length} file(s)` : "-"}
+                      </td>
+                      <td>
+                        <button className="admin-save-btn" onClick={() => startEditAchievement(a)}>Edit</button>
+                        <button className="admin-delete-btn" onClick={() => deleteAchievement(a)}>Delete</button>
                       </td>
                     </tr>
                   ))}

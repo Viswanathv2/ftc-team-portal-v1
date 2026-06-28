@@ -14,24 +14,49 @@ async function loadProfile(user) {
     .eq("user_id", user.id)
     .single();
 
+  const avatarUrl = await loadAvatar(user.email);
+
   if (error || !data) {
     return {
       displayName: safeNameFromEmail(user.email),
       isCoach: false,
-      isPortalAdmin: false
+      isPortalAdmin: false,
+      avatarUrl
     };
   }
 
   return {
     displayName: data.display_name || safeNameFromEmail(user.email),
     isCoach: Boolean(data.is_coach),
-    isPortalAdmin: Boolean(data.is_portal_admin)
+    isPortalAdmin: Boolean(data.is_portal_admin),
+    avatarUrl
   };
 }
 
+// Find a profile photo for the logged-in user by matching their email
+// against the team_members / coaches / mentors rosters.
+async function loadAvatar(email) {
+  const target = String(email || "").trim().toLowerCase();
+  if (!target) return "";
+  for (const table of ["team_members", "coaches", "mentors"]) {
+    const { data } = await supabase
+      .from(table)
+      .select("image_url,email")
+      .ilike("email", target)
+      .limit(1)
+      .maybeSingle();
+    if (data?.image_url) {
+      return data.image_url;
+    }
+  }
+  return "";
+}
+
+const EMPTY_PROFILE = { displayName: "Member", isCoach: false, isPortalAdmin: false, avatarUrl: "" };
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState({ displayName: "Member", isCoach: false, isPortalAdmin: false });
+  const [profile, setProfile] = useState(EMPTY_PROFILE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,7 +69,7 @@ export function AuthProvider({ children }) {
 
       if (!sessionUser) {
         setUser(null);
-        setProfile({ displayName: "Member", isCoach: false, isPortalAdmin: false });
+        setProfile(EMPTY_PROFILE);
         setLoading(false);
         return;
       }
@@ -64,7 +89,7 @@ export function AuthProvider({ children }) {
 
       if (!sessionUser) {
         setUser(null);
-        setProfile({ displayName: "Member", isCoach: false, isPortalAdmin: false });
+        setProfile(EMPTY_PROFILE);
         return;
       }
 
@@ -121,7 +146,7 @@ export function AuthProvider({ children }) {
     async logout() {
       await supabase.auth.signOut();
       setUser(null);
-      setProfile({ displayName: "Member", isCoach: false, isPortalAdmin: false });
+      setProfile(EMPTY_PROFILE);
     }
   }), [user, profile, loading]);
 
