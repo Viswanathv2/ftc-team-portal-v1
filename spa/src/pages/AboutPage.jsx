@@ -9,10 +9,10 @@ import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 
 const DISCIPLINES = [
-  { icon: "💻", title: "Software", desc: "FTCLib, RoadRunner, OpenCV vision pipelines" },
-  { icon: "🔧", title: "Mechanical", desc: "Custom drivetrain and game-specific manipulators" },
-  { icon: "📐", title: "CAD & Design", desc: "OnShape assemblies with tolerance-aware modeling" },
-  { icon: "🏆", title: "Competition", desc: "League play with World Championship aspirations" }
+  { icon: "📐", title: "CAD & Design", desc: "We turn ideas into detailed 3D models and smart designs that help our robot fit together and work better." },
+  { icon: "🔧", title: "Mechanical", desc: "We design and build strong, reliable robot systems that can handle the demands of competition and perform under pressure." },
+  { icon: "💻", title: "Software", desc: "We bring our robot to life with code, autonomous routines, and vision tools that help it think fast and move smart." },
+  { icon: "🏆", title: "Competition", desc: "We prepare, practice, and compete with focus and teamwork as we work toward bigger goals and challenge ourselves to grow." }
 ];
 
 const EVENT_FILTERS = [
@@ -160,25 +160,28 @@ export default function AboutPage() {
             <span className="about-eyebrow-text">About Our Team</span>
           </div>
 
-          {/* <p className="content-box-lead"> */}
-          <p>
-            Architechs (FTC #25795) was founded in 2024 with a simple conviction: students
-            can engineer competition-grade robots. We compete in the FIRST Tech Challenge,
-            where teams design, build, program, and operate robots in alliance-format field
-            matches.
-          </p>
-          <p>
-            Every member participates across the full engineering cycle — from whiteboard
-            concepts to field-ready hardware. Beyond competition, we document our process,
-            mentor younger students, and engage our community through STEM outreach events.
-          </p>
-
-          <p>
-            Based in Mechanicsburg, PA, we combine the rookie energy of a 2nd-year FTC team
-            with the veteran wisdom of 8 years in FLL. We&apos;re a diverse team of builders,
-            coders, and community leaders, recognized by <strong>POWER WOMEN</strong> for
-            introducing girls to STEM.
-          </p>
+          { <p className="content-box-lead"> 
+            Architechs FTC #25795 is a student robotics team built on big ideas, hands-on creativity, 
+            and a love for competition. Founded in 2024, we compete in the FIRST Tech Challenge, 
+            where teams design, build, program, and drive robots in fast-paced alliance matches. 
+            We believe students can do real engineering work — and do it well.
+          </p> }
+          {<p className="content-box-lead">
+            Our team is made up of builders, coders, designers, drivers, and problem-solvers who all jump 
+            in across every part of the season. From sketching ideas on a whiteboard to testing on the field, 
+            everyone gets involved in creating a robot we can be proud of. We learn by doing, support each other, 
+            and push ourselves to improve every step of the way.
+          </p>}
+          {<p className="content-box-lead">
+            But we’re not just about robots. We also love sharing STEM with our community by mentoring younger students, 
+            showing up at outreach events, and documenting our journey so others can learn with us. We want to make robotics 
+            exciting, welcoming, and open to everyone.
+          </p>}
+          {<p className="content-box-lead">
+            Based in Mechanicsburg, PA, Architechs brings together fresh FTC energy and eight years of FLL experience. 
+            We’re proud to be a team full of momentum, teamwork, and creativity — and proud to have been recognized 
+            by POWER WOMEN for helping introduce girls to STEM.
+          </p>}
 
           <div className="about-disciplines">
             {DISCIPLINES.map((item) => (
@@ -193,8 +196,17 @@ export default function AboutPage() {
           <div className="about-aspirations">
             <h3>Future Aspirations</h3>
             <p>
-              Our goal is to qualify for Worlds, further reduce cycle times, spread awareness
-              of FIRST, and continue building the &lsquo;ARCHITECHS&rsquo; legacy.
+              As we continue to grow, our vision is to compete at the highest levels of the FIRST Tech Challenge, 
+              including qualification for the FIRST World Championship. We are focused on pushing the performance 
+              of our robot, improving cycle times, and refining every part of our design and strategy. Just as importantly, 
+              we aim to share the excitement of FIRST with more students, families, and community members so that others 
+              can experience the impact of STEM robotics.
+            </p>
+            <br />
+            <p>
+              Looking ahead, we want to build on the ARCHITECHS legacy by creating a team culture defined by innovation, 
+              resilience, and purpose. Our goal is not only to achieve competitive success, but also to inspire future engineers, 
+              strengthen our community, and leave a lasting positive impact through everything we build and contribute.
             </p>
           </div>
         </section>
