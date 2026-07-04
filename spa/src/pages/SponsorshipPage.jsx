@@ -24,6 +24,7 @@ export default function SponsorshipPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     organization: "",
     level: "",
     message: ""
@@ -56,6 +57,7 @@ export default function SponsorshipPage() {
     const bodyLines = [
       `Name: ${form.name}`,
       `Email: ${form.email}`,
+      `Phone: ${form.phone || "—"}`,
       `Organization / Company: ${form.organization || "—"}`,
       `Sponsorship Level: ${form.level || "Not sure yet"}`,
       "",
@@ -72,42 +74,39 @@ export default function SponsorshipPage() {
     event.preventDefault();
     setError("");
 
-    // If EmailJS hasn't been configured yet, fall back to the visitor's mail app.
-    if (!emailjsConfigured) {
-      sendViaMailto();
-      setSubmitted(true);
+    if (!form.name.trim()) {
+      setError("Please enter your full name.");
+      return;
+    }
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError("Please provide a phone number or an email address so we can reach you.");
       return;
     }
 
-    setSending(true);
-    try {
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        {
-          to_email: SPONSOR_EMAIL,
-          from_name: form.name,
-          reply_to: form.email,
-          organization: form.organization || "—",
-          level: form.level || "Not sure yet",
-          message: form.message || "(none)"
-        },
-        { publicKey: EMAILJS_PUBLIC_KEY }
-      );
-      setSubmitted(true);
-    } catch (err) {
-      setError(
-        "Sorry, we couldn't send your message right now. Please email us directly at " +
-          SPONSOR_EMAIL +
-          "."
-      );
-    } finally {
-      setSending(false);
+    const { error: insertError } = await supabase.from("interest_submissions").insert({
+      kind: "sponsor",
+      full_name: form.name.trim(),
+      email: form.email.trim() || null,
+      phone: form.phone.trim() || null,
+      team_location: form.organization.trim() || null,
+      student_count: form.level || null,
+      additional_info: form.message.trim() || null,
+      status: "New",
+      created_at: new Date().toISOString()
+    });
+
+    if (insertError) {
+      setError(`Sorry, we couldn't submit your form: ${insertError.message}`);
+      return;
     }
+
+    // Submission saved to interest_submissions. Skip email delivery for now.
+    setSubmitted(true);
+    setSending(false);
   }
 
   function resetForm() {
-    setForm({ name: "", email: "", organization: "", level: "", message: "" });
+    setForm({ name: "", email: "", phone: "", organization: "", level: "", message: "" });
     setSubmitted(false);
     setError("");
   }
@@ -247,14 +246,26 @@ export default function SponsorshipPage() {
                     placeholder="Your full name"
                   />
 
-                  <label className="sponsor-label" htmlFor="spEmail">Email Address</label>
+                  <label className="sponsor-label" htmlFor="spEmail">
+                    Email Address <span className="sponsor-optional">(optional if phone provided)</span>
+                  </label>
                   <input
                     id="spEmail"
                     type="email"
-                    required
                     value={form.email}
                     onChange={(e) => update("email", e.target.value)}
                     placeholder="you@company.com"
+                  />
+
+                  <label className="sponsor-label" htmlFor="spPhone">
+                    Phone Number <span className="sponsor-optional">(optional if email provided)</span>
+                  </label>
+                  <input
+                    id="spPhone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => update("phone", e.target.value)}
+                    placeholder="(555) 123-4567"
                   />
 
                   <label className="sponsor-label" htmlFor="spOrg">Organization / Company</label>

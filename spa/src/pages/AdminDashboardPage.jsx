@@ -8,13 +8,14 @@ import FeedbackTab from "../components/admin/FeedbackTab";
 import InterestRequestsTab from "../components/admin/InterestRequestsTab";
 import AnnouncementsAdminTab from "../components/admin/AnnouncementsAdminTab";
 import SponsorsAdminTab from "../components/admin/SponsorsAdminTab";
+import UserManagementAdminTab from "../components/admin/UserManagementAdminTab";
 
 export default function AdminDashboardPage() {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("interest");
 
   // Only coaches and portal admins can access
-  if (!user || (!profile.isCoach && !profile.isPortalAdmin)) {
+  if (!user || (!profile.isAdmin && !profile.isCoach && !profile.isPortalAdmin)) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -72,6 +73,14 @@ export default function AdminDashboardPage() {
             </button>
           </>
         )}
+        {profile.isAdmin && (
+          <button
+            className={`admin-tab-btn ${activeTab === "users" ? "active" : ""}`}
+            onClick={() => setActiveTab("users")}
+          >
+            User Management
+          </button>
+        )}
       </div>
 
       <div className="admin-content">
@@ -82,6 +91,7 @@ export default function AdminDashboardPage() {
         {activeTab === "people" && profile.isPortalAdmin && <PeopleAdminTab />}
         {activeTab === "visits" && profile.isPortalAdmin && <VisitAnalyticsTab />}
         {activeTab === "feedback" && profile.isPortalAdmin && <FeedbackTab />}
+        {activeTab === "users" && profile.isAdmin && <UserManagementAdminTab />}
       </div>
     </section>
   );

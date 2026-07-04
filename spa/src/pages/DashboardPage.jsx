@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { defaultNavItems } from "../config/dashboardDefaults";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
 
 function mergeMenuItems(rows) {
   if (!Array.isArray(rows) || rows.length === 0) {
@@ -28,20 +27,31 @@ export default function DashboardPage() {
   const { profile } = useAuth();
   const [items, setItems] = useState(defaultNavItems);
   const [selectedId, setSelectedId] = useState(defaultNavItems[0].id);
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const { data, error } = await supabase.from("menu_items").select("id,title,content");
+      const [menuResp, announcementResp] = await Promise.all([
+        supabase.from("menu_items").select("id,title,content"),
+        supabase
+          .from("announcements")
+          .select("id,title,body,author_name,created_at")
+          .order("created_at", { ascending: false })
+          .limit(20)
+      ]);
       if (!active) return;
 
-      if (error) {
+      if (menuResp.error) {
         setItems(defaultNavItems);
       } else {
-        setItems(mergeMenuItems(data));
+        setItems(mergeMenuItems(menuResp.data));
       }
+
+      setAnnouncements(Array.isArray(announcementResp.data) ? announcementResp.data : []);
       setLoading(false);
     }
 
@@ -63,44 +73,56 @@ export default function DashboardPage() {
 
   return (
     <section className="app-shell-page">
-      <div className="app-shell">
-        <aside className="sidebar">
-          <h2>Team Menu</h2>
-          <ul id="navList">
-            {items.map((item) => (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  className={selectedId === item.id ? "active" : ""}
-                  onClick={() => setSelectedId(item.id)}
-                >
-                  {item.title}
-                </button>
-              </li>
-            ))}
-            {(profile.isCoach || profile.isPortalAdmin) && (
-              <li>
-                <Link to="/admin" className="admin-link">
-                  ⚙️ Admin Settings
-                </Link>
-              </li>
-            )}
-          </ul>
-        </aside>
-        <section className="content">
-          <header>
-            <h1>Welcome, {profile.displayName}</h1>
-            <p id="contentSubtitle">Pick an item from the left menu.</p>
-          </header>
-          <article className="content-card">
-            <h3>{selectedItem.title}</h3>
-            <p>{selectedItem.content}</p>
-            {(profile.isCoach || profile.isPortalAdmin) ? (
-              <p className="success">Coach/Portal Admin tools migration is next. Your role is detected.</p>
+      <section className="content">
+        <header>
+          <h1>Welcome, {profile.displayName}</h1>
+        </header>
+
+        <article className="content-card">
+          <button
+            type="button"
+            className="announcements-toggle"
+            onClick={() => setAnnouncementsOpen((v) => !v)}
+            aria-expanded={announcementsOpen}
+          >
+            <span className="announcements-caret" aria-hidden="true">
+              {announcementsOpen ? "▾" : "▸"}
+            </span>
+            Announcements
+            {announcements.length > 0 ? (
+              <span className="announcements-count">{announcements.length}</span>
             ) : null}
-          </article>
-        </section>
-      </div>
+          </button>
+
+          {announcementsOpen ? (
+            announcements.length ? (
+              <ul className="announcement-list">
+                {announcements.map((a) => (
+                  <li key={a.id} className="announcement-card">
+                    <div className="announcement-head">
+                      <h3>{a.title}</h3>
+                    </div>
+                    {a.body ? <p className="announcement-body">{a.body}</p> : null}
+                    <p className="announcement-meta">
+                      {a.author_name || "Coach"} · {new Date(a.created_at).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="announcement-empty">No announcements yet.</p>
+            )
+          ) : null}
+        </article>
+
+        <article className="content-card">
+          <h3>{selectedItem.title}</h3>
+          <p>{selectedItem.content}</p>
+          {(profile.isCoach || profile.isPortalAdmin) ? (
+            <p className="success">Coach/Portal Admin tools migration is next. Your role is detected.</p>
+          ) : null}
+        </article>
+      </section>
     </section>
   );
 }

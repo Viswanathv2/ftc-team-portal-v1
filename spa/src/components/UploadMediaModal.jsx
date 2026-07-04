@@ -17,39 +17,49 @@ const CATEGORIES = [
 // freshly-inserted row so the gallery can show it instantly with a NEW badge.
 export default function UploadMediaModal({ onClose, onUploaded }) {
   const inputRef = useRef(null);
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [isVideo, setIsVideo] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
   const [dragging, setDragging] = useState(false);
   const [form, setForm] = useState({ title: "", caption: "", event_type: "game" });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 
-  function chooseFile(f) {
-    if (!f) return;
-    if (!f.type.startsWith("image") && !f.type.startsWith("video")) {
+  function chooseFiles(nextFiles) {
+    const picked = Array.from(nextFiles || []);
+    if (!picked.length) return;
+    const invalid = picked.find((f) => !f.type.startsWith("image") && !f.type.startsWith("video"));
+    if (invalid) {
       setError("Please choose an image or video file.");
       return;
     }
     setError("");
-    setFile(f);
-    setIsVideo(f.type.startsWith("video"));
-    setPreviewUrl(URL.createObjectURL(f));
+    setFiles((prev) => [...prev, ...picked]);
+    setPreviews((prev) => [
+      ...prev,
+      ...picked.map((f) => ({ url: URL.createObjectURL(f), isVideo: f.type.startsWith("video") }))
+    ]);
     if (!form.title) {
-      setForm((p) => ({ ...p, title: f.name.replace(/\.[^.]+$/, "") }));
+      setForm((p) => ({ ...p, title: picked[0].name.replace(/\.[^.]+$/, "") }));
     }
+  }
+
+  function removePicked(index) {
+    const preview = previews[index];
+    if (preview?.url) URL.revokeObjectURL(preview.url);
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
   }
 
   function onDrop(e) {
     e.preventDefault();
     setDragging(false);
-    chooseFile(e.dataTransfer.files?.[0]);
+    chooseFiles(e.dataTransfer.files);
   }
 
   async function submit(e) {
     e.preventDefault();
-    if (!file) {
-      setError("Please choose a photo or video first.");
+    if (!files.length) {
+      setError("Please choose one or more photos/videos first.");
       return;
     }
     if (!form.title.trim()) {
@@ -58,44 +68,47 @@ export default function UploadMediaModal({ onClose, onUploaded }) {
     }
     setUploading(true);
     setError("");
+    const inserted = [];
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      const ext = file.name.split(".").pop();
+      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = `${form.event_type}/${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+      if (uploadError) {
+        setError(`Upload failed: ${uploadError.message}`);
+        setUploading(false);
+        return;
+      }
 
-    const ext = file.name.split(".").pop();
-    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const path = `${form.event_type}/${safeName}`;
+      const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+      const itemTitle = files.length > 1 ? `${form.title.trim()} (${i + 1})` : form.title.trim();
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { cacheControl: "3600", upsert: false });
+      const { data, error: insertError } = await supabase
+        .from("event_media")
+        .insert({
+          title: itemTitle,
+          event_type: form.event_type,
+          caption: form.caption.trim() || null,
+          media_url: publicData.publicUrl,
+          media_type: mediaType,
+          storage_path: path
+        })
+        .select("id,title,event_type,event_date,caption,media_url,media_type,created_at")
+        .single();
 
-    if (uploadError) {
-      setError(`Upload failed: ${uploadError.message}`);
-      setUploading(false);
-      return;
+      if (insertError) {
+        setError(`Saved file but could not add to gallery: ${insertError.message}`);
+        setUploading(false);
+        return;
+      }
+      inserted.push(data);
     }
 
-    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    const mediaType = isVideo ? "video" : "image";
-
-    const { data, error: insertError } = await supabase
-      .from("event_media")
-      .insert({
-        title: form.title.trim(),
-        event_type: form.event_type,
-        caption: form.caption.trim() || null,
-        media_url: publicData.publicUrl,
-        media_type: mediaType,
-        storage_path: path
-      })
-      .select("id,title,event_type,event_date,caption,media_url,media_type,created_at")
-      .single();
-
-    if (insertError) {
-      setError(`Saved file but could not add to gallery: ${insertError.message}`);
-      setUploading(false);
-      return;
-    }
-
-    onUploaded(data);
+    onUploaded(inserted);
   }
 
   return (
@@ -124,26 +137,32 @@ export default function UploadMediaModal({ onClose, onUploaded }) {
             role="button"
             tabIndex={0}
           >
-            {previewUrl ? (
-              <div className="upload-preview">
-                {isVideo ? (
-                  <video src={previewUrl} muted />
-                ) : (
-                  <img src={previewUrl} alt="Preview" />
-                )}
+            {previews.length ? (
+              <div className="upload-preview-grid">
+                {previews.map((p, i) => (
+                  <div key={`${p.url}-${i}`} className="upload-preview-item">
+                    {p.isVideo ? (
+                      <video src={p.url} muted />
+                    ) : (
+                      <img src={p.url} alt={`Preview ${i + 1}`} />
+                    )}
+                    <button type="button" className="upload-preview-remove" onClick={() => removePicked(i)}>×</button>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="upload-dropzone-hint">
                 <span className="upload-dropzone-icon">⬆</span>
-                <span>Drag &amp; drop a photo or video here, or click to browse</span>
+                <span>Drag &amp; drop photos/videos here, or click to browse</span>
               </div>
             )}
             <input
               ref={inputRef}
               type="file"
               accept="image/*,video/*"
+              multiple
               style={{ display: "none" }}
-              onChange={(e) => chooseFile(e.target.files?.[0])}
+              onChange={(e) => chooseFiles(e.target.files)}
             />
           </div>
 

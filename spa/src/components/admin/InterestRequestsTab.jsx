@@ -79,8 +79,8 @@ export default function InterestRequestsTab() {
     <div className="admin-section">
       <h2>Interest Requests</h2>
       <p className="analytics-help">
-        Submissions from the Join Us form. Update the status and add notes about whether you have
-        reached out.
+        Submissions from Join, Onboard New Team, and Sponsorship forms. Update status and add
+        notes about whether you have reached out.
       </p>
 
       <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
@@ -96,8 +96,16 @@ export default function InterestRequestsTab() {
           {items.map((item) => (
             <div key={item.id} className="interest-admin-card">
               <div className="interest-admin-head">
-                <span className={`interest-kind-badge ${item.kind === "join" ? "join" : "onboard"}`}>
-                  {item.kind === "join" ? "Join request" : "Onboard new team"}
+                <span
+                  className={`interest-kind-badge ${
+                    item.kind === "join" ? "join" : item.kind === "sponsor" ? "sponsor" : "onboard"
+                  }`}
+                >
+                  {item.kind === "join"
+                    ? "Join request"
+                    : item.kind === "sponsor"
+                      ? "Sponsor request"
+                      : "Onboard new team"}
                 </span>
                 <span className={`task-status-badge ${statusClass(item.status)}`}>
                   {item.status}
@@ -121,6 +129,23 @@ export default function InterestRequestsTab() {
                   </div>
                   <div><dt>Heard via</dt><dd>{item.heard_about || "—"}</dd></div>
                   <div className="interest-admin-wide"><dt>Intro</dt><dd>{item.intro || "—"}</dd></div>
+                </dl>
+              ) : item.kind === "sponsor" ? (
+                <dl className="interest-admin-fields">
+                  <div><dt>Name</dt><dd>{item.full_name || "—"}</dd></div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{item.email ? <a href={`mailto:${item.email}`}>{item.email}</a> : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>{item.phone ? <a href={`tel:${item.phone}`}>{item.phone}</a> : "—"}</dd>
+                  </div>
+                  <div><dt>Organization</dt><dd>{item.team_location || "—"}</dd></div>
+                  <div><dt>Sponsorship level</dt><dd>{item.student_count || "Not sure yet"}</dd></div>
+                  <div className="interest-admin-wide">
+                    <dt>Message</dt><dd>{item.additional_info || "—"}</dd>
+                  </div>
                 </dl>
               ) : (
                 <dl className="interest-admin-fields">

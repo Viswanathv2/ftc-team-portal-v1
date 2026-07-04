@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import RouteLoading from "../components/RouteLoading";
 import Lightbox from "../components/Lightbox";
 import UploadMediaModal from "../components/UploadMediaModal";
@@ -33,6 +34,52 @@ const TYPE_LABELS = {
   other: "Event"
 };
 
+const IMPACT_METRICS = [
+  { value: "10,000+", label: "People Reached" },
+  { value: "8", label: "FLL Teams Mentored" },
+  { value: "6+", label: "Outreach Events" },
+  { value: "125", label: "Backyard Attendees" }
+];
+
+const OUTREACH_EVENTS = [
+  {
+    icon: "⛺",
+    badge: "10,000+",
+    name: "Jubilee Day",
+    desc: "Hosted a stall at a major community fair. Collaborated with 'Power Women' organization to teach FIRST benefits and raise STEM awareness in Mechanicsburg."
+  },
+  {
+    icon: "🏠",
+    badge: "125",
+    name: "Backyard Outreach",
+    desc: "Hosted 125 attendees to promote interest in STEM and recruit new team members. Following this event, Thunder Busters established their own FTC team!"
+  },
+  {
+    icon: "💪",
+    badge: "500",
+    name: "Power Women Event",
+    desc: "Set up a robotics stall at a Power Women event focused on promoting girls in STEM. Raising awareness through interactive robot demonstrations."
+  },
+  {
+    icon: "🌍",
+    badge: "Est. 200+",
+    name: "Earth Day",
+    desc: "Set up a robotics stall to introduce children and families to STEM through interactive robot demos, hands-on activities, and conversations."
+  },
+  {
+    icon: "🥐",
+    badge: "150+",
+    name: "YouBiz Bake Sale",
+    desc: "Sold baked goods at a YouBiz entrepreneurship event to raise funds. Promoted FIRST alongside other young entrepreneurs."
+  },
+  {
+    icon: "💛",
+    badge: "8 FLL teams",
+    name: "FLL Mentoring Program",
+    desc: "Mentored Ultra Builders (FLL 56703), STEM Squad, Brick Benders (66266), Robo Rookies, and PA Technicians. Ran online classes reaching FLL teams across the United States."
+  }
+];
+
 // Achievements may store many media in `media`, or a single legacy media_url.
 // Normalize both into one array of { url, type } objects.
 function achievementMedia(a) {
@@ -50,6 +97,7 @@ const MEMBER_RESOURCES = [
 ];
 
 export default function AboutPage() {
+  const location = useLocation();
   const page = usePortalPage("about");
   useTrackVisit("about");
   const { user } = useAuth();
@@ -89,6 +137,21 @@ export default function AboutPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!location.hash || page.loading) {
+      return;
+    }
+    const id = location.hash.replace("#", "");
+    const attempt = () => {
+      const target = document.getElementById(id);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+    const t = setTimeout(attempt, 80);
+    return () => clearTimeout(t);
+  }, [location.hash, page.loading]);
+
   const filteredMedia = useMemo(
     () => (mediaFilter === "all" ? media : media.filter((m) => m.event_type === mediaFilter)),
     [media, mediaFilter]
@@ -125,9 +188,14 @@ export default function AboutPage() {
     if (items.length) setLightbox({ items, index: startIndex });
   }
 
-  function handleUploaded(row) {
-    setMedia((prev) => [row, ...prev]);
-    setNewIds((prev) => new Set(prev).add(row.id));
+  function handleUploaded(rows) {
+    const batch = Array.isArray(rows) ? rows : [rows];
+    setMedia((prev) => [...batch, ...prev]);
+    setNewIds((prev) => {
+      const next = new Set(prev);
+      batch.forEach((r) => next.add(r.id));
+      return next;
+    });
     setShowUpload(false);
   }
 
@@ -183,6 +251,10 @@ export default function AboutPage() {
             by POWER WOMEN for helping introduce girls to STEM.
           </p>}
 
+          <figure className="about-team-photo">
+            <img src="/team-photo.jpg" alt="Team 25795 Architechs" />
+          </figure>
+
           <div className="about-disciplines">
             {DISCIPLINES.map((item) => (
               <div key={item.title} className="about-card">
@@ -208,6 +280,43 @@ export default function AboutPage() {
               resilience, and purpose. Our goal is not only to achieve competitive success, but also to inspire future engineers, 
               strengthen our community, and leave a lasting positive impact through everything we build and contribute.
             </p>
+          </div>
+        </section>
+
+        <section className="landing-section ci-section" id="community-impact">
+          <div className="ci-header">
+            <div className="ci-header-left">
+              <div className="about-eyebrow">
+                <span className="about-eyebrow-line" />
+                <span className="about-eyebrow-text">Community Impact</span>
+              </div>
+              <h2>SPREADING STEM</h2>
+              <p className="ci-lead">
+                From Backyard Outreach (125 people) to Jubilee Day (10,000+ people) —
+                the Architechs believe great engineers give back.
+              </p>
+            </div>
+            <div className="ci-stats-row">
+              {IMPACT_METRICS.map((metric) => (
+                <div key={metric.label} className="ci-stat-box">
+                  <div className="ci-stat-value">{metric.value}</div>
+                  <div className="ci-stat-label">{metric.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="ci-events-grid">
+            {OUTREACH_EVENTS.map((ev) => (
+              <div key={ev.name} className="ci-event-card">
+                <div className="ci-event-card-top">
+                  <span className="ci-event-icon" aria-hidden="true">{ev.icon}</span>
+                  <span className="ci-event-badge">{ev.badge}</span>
+                </div>
+                <div className="ci-event-name">{ev.name}</div>
+                <p className="ci-event-desc">{ev.desc}</p>
+              </div>
+            ))}
           </div>
         </section>
 

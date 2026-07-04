@@ -8,7 +8,7 @@ const BUCKET = "event-media";
 
 const emptyForm = { title: "", description: "", url: "" };
 
-export default function LearningResourcesPage() {
+export default function LearningResourcesPage({ embedded = false }) {
   useTrackVisit("learning");
   const { user, profile } = useAuth();
   const isManager = Boolean(profile?.isCoach || profile?.isPortalAdmin);
@@ -199,20 +199,11 @@ export default function LearningResourcesPage() {
   }
 
   if (loading) {
-    return <RouteLoading />;
+    return embedded ? <p>Loading resources…</p> : <RouteLoading />;
   }
 
-  return (
-    <section className="landing-page">
-      <header className="landing-header">
-        <h1>Learning Resources</h1>
-        <p className="landing-tagline">
-          Documents, videos, and links shared by the team
-        </p>
-      </header>
-
-      <div className="landing-container">
-        <section className="landing-section">
+  const resourcesContent = (
+    <section className={embedded ? "dashboard-learning-content" : "landing-section"}>
           {status.message && (
             <p className={status.type} role="status">{status.message}</p>
           )}
@@ -393,8 +384,23 @@ export default function LearningResourcesPage() {
               </div>
             )}
           </div>
-        </section>
-      </div>
+    </section>
+  );
+
+  if (embedded) {
+    return resourcesContent;
+  }
+
+  return (
+    <section className="landing-page">
+      <header className="landing-header">
+        <h1>Learning Resources</h1>
+        <p className="landing-tagline">
+          Documents, videos, and links shared by the team
+        </p>
+      </header>
+
+      <div className="landing-container">{resourcesContent}</div>
     </section>
   );
 }

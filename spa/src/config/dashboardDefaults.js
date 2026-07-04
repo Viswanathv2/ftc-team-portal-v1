@@ -1,7 +1,7 @@
 export const defaultNavItems = [
   {
     id: "announcements",
-    title: "Announcements",
+    title: "Announcements123",
     content: "Coach notes, meeting reminders, and tournament updates go here."
   },
   {

@@ -3,17 +3,62 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 
-// Bell shown to any signed-in member. Notifications come from three sources:
-//   * announcements        -> every signed-in member is notified, click -> /schedule
-//   * learning_resources   -> every signed-in member is notified (except the
-//                             uploader), click -> /learning
-//   * interest_submissions -> only coaches / portal admins, click -> /admin
-// A member can "clear" a notification just for themselves; that records a row in
-// notification_dismissals keyed by their user id (ids are globally-unique uuids).
+const RECENT_WINDOW_DAYS = 7;
+
+function cutoffTime() {
+  return Date.now() - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function recentOnly(row) {
+  const createdAt = new Date(row.created_at || 0).getTime();
+  return Number.isFinite(createdAt) && createdAt >= cutoffTime();
+}
+
+function storageKey(userId) {
+  return `portal_notification_dismissed_${userId}`;
+}
+
+function readDismissed(userId) {
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDismissed(userId, dismissed) {
+  localStorage.setItem(storageKey(userId), JSON.stringify(Array.from(dismissed)));
+}
+
+function taskSnapshotKey(userId) {
+  return `portal_task_snapshot_${userId}`;
+}
+
+function readTaskSnapshot(userId) {
+  try {
+    const raw = localStorage.getItem(taskSnapshotKey(userId));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeTaskSnapshot(userId, snapshot) {
+  localStorage.setItem(taskSnapshotKey(userId), JSON.stringify(snapshot));
+}
+
+function notificationKey(notification) {
+  if (notification.type === "schedule") {
+    return `${notification.type}:${notification.id}:${notification.signature || ""}`;
+  }
+  return `${notification.type}:${notification.id}`;
+}
+
 export default function NotificationBell() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const isManager = Boolean(profile?.isCoach || profile?.isPortalAdmin);
+  const isManager = Boolean(profile?.isAdmin || profile?.isCoach || profile?.isPortalAdmin);
 
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
@@ -21,8 +66,11 @@ export default function NotificationBell() {
 
   useEffect(() => {
     function onClick(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+      }
     }
+
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
@@ -32,97 +80,171 @@ export default function NotificationBell() {
       setItems([]);
       return;
     }
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isManager, user?.id]);
 
-  async function load() {
-    const queries = [
-      supabase
-        .from("announcements")
-        .select("id,title,created_at")
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase.from("notification_dismissals").select("submission_id").eq("user_id", user.id),
-      supabase
-        .from("learning_resources")
-        .select("id,title,uploader_id,uploader_name,created_at")
-        .order("created_at", { ascending: false })
-        .limit(50)
-    ];
-    // Only managers receive interest-form notifications.
-    if (isManager) {
-      queries.push(
+    let active = true;
+
+    async function load() {
+      const [annResp, resourceResp, eventResp, interestResp, memberResp, taskResp] = await Promise.all([
         supabase
-          .from("interest_submissions")
-          .select("id,kind,full_name,team_location,created_at")
+          .from("announcements")
+          .select("id,title,created_at")
           .order("created_at", { ascending: false })
-          .limit(50)
-      );
+          .limit(25),
+        supabase
+          .from("learning_resources")
+          .select("id,title,uploader_id,created_at")
+          .order("created_at", { ascending: false })
+          .limit(25),
+        supabase
+          .from("event_media")
+          .select("id,title,created_at")
+          .order("created_at", { ascending: false })
+          .limit(25),
+        isManager
+          ? supabase
+              .from("interest_submissions")
+              .select("id,kind,full_name,team_location,created_at")
+              .order("created_at", { ascending: false })
+              .limit(25)
+          : Promise.resolve({ data: [] }),
+        isManager
+          ? supabase
+              .from("team_members")
+              .select("id,name,created_at")
+              .order("created_at", { ascending: false })
+              .limit(25)
+          : Promise.resolve({ data: [] }),
+        isManager
+          ? supabase
+              .from("tasks")
+              .select("id,task,status,start_date,end_date,member_type,member_id,created_at")
+            .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] })
+      ]);
+
+      if (!active) {
+        return;
+      }
+
+      const dismissed = readDismissed(user.id);
+      const announcements = (annResp.data || [])
+        .filter(recentOnly)
+        .map((row) => ({
+          id: row.id,
+          type: "announcement",
+          title: `New announcement: ${row.title || "Update"}`,
+          created_at: row.created_at,
+          to: "/dashboard"
+        }));
+
+      const resources = (resourceResp.data || [])
+        .filter((row) => row.uploader_id !== user.id)
+        .filter(recentOnly)
+        .map((row) => ({
+          id: row.id,
+          type: "resource",
+          title: `New learning resource: ${row.title || "Resource"}`,
+          created_at: row.created_at,
+          to: "/learning"
+        }));
+
+      const events = (eventResp.data || [])
+        .filter(recentOnly)
+        .map((row) => ({
+          id: row.id,
+          type: "event",
+          title: `New team event: ${row.title || "Event"}`,
+          created_at: row.created_at,
+          to: "/about"
+        }));
+
+      const interests = (interestResp.data || [])
+        .filter(recentOnly)
+        .map((row) => ({
+          id: row.id,
+          type: row.kind === "sponsor" ? "sponsor" : "interest",
+          title:
+            row.kind === "sponsor"
+              ? `Sponsor inquiry: ${row.full_name || row.team_location || "Someone"}`
+              : row.kind === "onboard"
+                ? `New team onboarding: ${row.team_location || "New team"}`
+                : `New team interest: ${row.full_name || "Someone"}`,
+          created_at: row.created_at,
+          to: "/admin"
+        }));
+
+      const members = (memberResp.data || [])
+        .filter(recentOnly)
+        .map((row) => ({
+          id: row.id,
+          type: "member",
+          title: `New team member: ${row.name || "Member"}`,
+          created_at: row.created_at,
+          to: "/admin"
+        }));
+
+      let schedule = [];
+      if (isManager) {
+        const previousSnapshot = readTaskSnapshot(user.id);
+        const hasPrevious = Object.keys(previousSnapshot).length > 0;
+        const nextSnapshot = {};
+
+        for (const row of taskResp.data || []) {
+          const signature = `${row.task || ""}|${row.status || ""}|${row.start_date || ""}|${row.end_date || ""}`;
+          nextSnapshot[row.id] = signature;
+
+          if (!hasPrevious) {
+            continue;
+          }
+
+          const prevSignature = previousSnapshot[row.id];
+          const changed = prevSignature && prevSignature !== signature;
+          const newlyAdded = !prevSignature;
+          if (!changed && !newlyAdded) {
+            continue;
+          }
+
+          schedule.push({
+            id: row.id,
+            type: "schedule",
+            title: `Team schedule updated: ${row.task || "Task"} (${row.status || "Not Started"})`,
+            created_at: changed ? new Date().toISOString() : row.created_at,
+            signature,
+            to: "/schedule"
+          });
+        }
+
+        writeTaskSnapshot(user.id, nextSnapshot);
+      }
+
+      const merged = [...announcements, ...resources, ...events, ...interests, ...members, ...schedule]
+        .filter((item) => !dismissed.has(notificationKey(item)))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setItems(merged);
     }
 
-    const [annResp, dismissedResp, resourceResp, interestResp] = await Promise.all(queries);
-    const dismissedIds = new Set((dismissedResp.data || []).map((d) => d.submission_id));
+    load();
+    const timer = window.setInterval(load, 30000);
 
-    const announcements = (annResp.data || []).map((a) => ({
-      id: a.id,
-      type: "announcement",
-      title: `Announcement: ${a.title}`,
-      created_at: a.created_at,
-      to: "/schedule"
-    }));
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [isManager, user?.id]);
 
-    // Notify everyone about new resources, except the member who uploaded it.
-    const resources = (resourceResp?.data || [])
-      .filter((r) => r.uploader_id !== user.id)
-      .map((r) => ({
-        id: r.id,
-        type: "resource",
-        title: `New resource: ${r.title}`,
-        created_at: r.created_at,
-        to: "/learning"
-      }));
-
-    const interest = (interestResp?.data || []).map((s) => ({
-      id: s.id,
-      type: "interest",
-      title:
-        s.kind === "join"
-          ? `Join request: ${s.full_name || "Someone"}`
-          : `New team onboarding: ${s.team_location || "New team"}`,
-      created_at: s.created_at,
-      to: "/admin"
-    }));
-
-    const merged = [...announcements, ...resources, ...interest]
-      .filter((n) => !dismissedIds.has(n.id))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-    setItems(merged);
-  }
-
-  async function clearOne(n) {
-    setItems((prev) => prev.filter((x) => x.id !== n.id));
-    await supabase
-      .from("notification_dismissals")
-      .upsert(
-        { user_id: user.id, submission_id: n.id, notif_type: n.type },
-        { onConflict: "user_id,submission_id" }
-      );
+  async function clearOne(notification) {
+    const next = readDismissed(user.id);
+    next.add(notificationKey(notification));
+    writeDismissed(user.id, next);
+    setItems((prev) => prev.filter((item) => notificationKey(item) !== notificationKey(notification)));
   }
 
   async function clearAll() {
-    const rows = items.map((n) => ({
-      user_id: user.id,
-      submission_id: n.id,
-      notif_type: n.type
-    }));
+    const next = readDismissed(user.id);
+    items.forEach((notification) => next.add(notificationKey(notification)));
+    writeDismissed(user.id, next);
     setItems([]);
-    if (rows.length) {
-      await supabase
-        .from("notification_dismissals")
-        .upsert(rows, { onConflict: "user_id,submission_id" });
-    }
   }
 
   if (!user) return null;
@@ -163,25 +285,25 @@ export default function NotificationBell() {
             <p className="notif-empty">You&apos;re all caught up.</p>
           ) : (
             <ul className="notif-list">
-              {items.map((n) => (
-                <li key={`${n.type}:${n.id}`} className="notif-row">
+              {items.map((notification) => (
+                <li key={`${notification.type}:${notification.id}`} className="notif-row">
                   <button
                     type="button"
                     className="notif-row-main"
                     onClick={() => {
                       setOpen(false);
-                      navigate(n.to);
+                      navigate(notification.to);
                     }}
                   >
-                    <span className="notif-row-title">{n.title}</span>
+                    <span className="notif-row-title">{notification.title}</span>
                     <span className="notif-row-time">
-                      {new Date(n.created_at).toLocaleString()}
+                      {new Date(notification.created_at).toLocaleString()}
                     </span>
                   </button>
                   <button
                     type="button"
                     className="notif-row-clear"
-                    onClick={() => clearOne(n)}
+                    onClick={() => clearOne(notification)}
                     aria-label="Clear notification"
                     title="Clear"
                   >

@@ -25,6 +25,8 @@ const emptyJoin = {
 
 const emptyOnboard = {
   full_name: "",
+  email: "",
+  phone: "",
   team_location: "",
   student_count: "",
   needs_member_support: "",
@@ -141,6 +143,10 @@ export default function JoinPage() {
       setError("Please enter your name.");
       return;
     }
+    if (!onboard.email.trim() && !onboard.phone.trim()) {
+      setError("Please provide a phone number or an email address so we can reach you.");
+      return;
+    }
     if (!onboard.team_location.trim()) {
       setError("Please share the team location so we can follow up.");
       return;
@@ -150,6 +156,8 @@ export default function JoinPage() {
     const { error: insertError } = await supabase.from("interest_submissions").insert({
       kind: "onboard",
       full_name: onboard.full_name.trim(),
+      email: onboard.email.trim() || null,
+      phone: onboard.phone.trim() || null,
       team_location: onboard.team_location.trim(),
       student_count: onboard.student_count.trim() || null,
       needs_member_support: onboard.needs_member_support || null,
@@ -169,6 +177,8 @@ export default function JoinPage() {
       "A new request to START / ONBOARD a new FTC team was submitted.",
       "",
       `Name: ${onboard.full_name.trim()}`,
+      `Email: ${onboard.email.trim() || "—"}`,
+      `Phone: ${onboard.phone.trim() || "—"}`,
       `Team location: ${onboard.team_location.trim()}`,
       `Students already identified: ${onboard.student_count.trim() || "—"}`,
       `Needs help identifying members: ${onboard.needs_member_support || "—"}`,
@@ -316,7 +326,7 @@ export default function JoinPage() {
                 <button
                   type="submit"
                   className="admin-save-btn sponsor-submit-btn"
-                  disabled={submitting}
+                  disabled={submitting || !join.acknowledged}
                 >
                   {submitting ? "Submitting\u2026" : "Submit interest form"}
                 </button>
@@ -343,6 +353,28 @@ export default function JoinPage() {
                   value={onboard.full_name}
                   onChange={(e) => setOnboard((v) => ({ ...v, full_name: e.target.value }))}
                   placeholder="Your full name"
+                />
+
+                <label className="sponsor-label" htmlFor="obEmail">
+                  Email Address <span className="sponsor-optional">(optional if phone provided)</span>
+                </label>
+                <input
+                  id="obEmail"
+                  type="email"
+                  value={onboard.email}
+                  onChange={(e) => setOnboard((v) => ({ ...v, email: e.target.value }))}
+                  placeholder="you@example.com"
+                />
+
+                <label className="sponsor-label" htmlFor="obPhone">
+                  Phone Number <span className="sponsor-optional">(optional if email provided)</span>
+                </label>
+                <input
+                  id="obPhone"
+                  type="tel"
+                  value={onboard.phone}
+                  onChange={(e) => setOnboard((v) => ({ ...v, phone: e.target.value }))}
+                  placeholder="(555) 555-5555"
                 />
 
                 <label className="sponsor-label" htmlFor="obLocation">Team Location</label>

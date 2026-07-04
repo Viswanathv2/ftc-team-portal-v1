@@ -10,7 +10,7 @@ function safeNameFromEmail(email) {
 async function loadProfile(user) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("display_name,is_coach,is_portal_admin")
+    .select("display_name,is_coach,is_portal_admin,is_portal_admin")
     .eq("user_id", user.id)
     .single();
 
@@ -19,6 +19,7 @@ async function loadProfile(user) {
   if (error || !data) {
     return {
       displayName: safeNameFromEmail(user.email),
+      isAdmin: false,
       isCoach: false,
       isPortalAdmin: false,
       avatarUrl
@@ -27,6 +28,7 @@ async function loadProfile(user) {
 
   return {
     displayName: data.display_name || safeNameFromEmail(user.email),
+    isAdmin: Boolean(data.is_portal_admin),
     isCoach: Boolean(data.is_coach),
     isPortalAdmin: Boolean(data.is_portal_admin),
     avatarUrl
@@ -52,7 +54,7 @@ async function loadAvatar(email) {
   return "";
 }
 
-const EMPTY_PROFILE = { displayName: "Member", isCoach: false, isPortalAdmin: false, avatarUrl: "" };
+const EMPTY_PROFILE = { displayName: "Member", isAdmin: false, isCoach: false, isPortalAdmin: false, avatarUrl: "" };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -122,6 +124,7 @@ export function AuthProvider({ children }) {
       const { error: profileError } = await supabase.from("profiles").upsert({
         user_id: data.user.id,
         display_name: displayName,
+        is_portal_admin: false,
         is_coach: false,
         is_portal_admin: false
       });

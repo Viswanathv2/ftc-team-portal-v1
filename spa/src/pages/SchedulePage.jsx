@@ -36,8 +36,6 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [newTask, setNewTask] = useState(emptyTask);
-  const [announcements, setAnnouncements] = useState([]);
-  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
 
   const isCoach = Boolean(profile?.isCoach || profile?.isPortalAdmin);
   const myEmail = String(user?.email || "").trim().toLowerCase();
@@ -48,7 +46,7 @@ export default function SchedulePage() {
 
   async function loadAll() {
     setLoading(true);
-    const [membersResp, coachesResp, mentorsResp, tasksResp, announcementsResp] = await Promise.all([
+    const [membersResp, coachesResp, mentorsResp, tasksResp] = await Promise.all([
       supabase
         .from("team_members")
         .select("id,name,roles,image_url,email")
@@ -71,12 +69,7 @@ export default function SchedulePage() {
         .from("tasks")
         .select("id,member_id,member_type,task,start_date,end_date,status,sort_order,created_at")
         .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("announcements")
-        .select("id,title,body,author_name,created_at")
-        .order("created_at", { ascending: false })
-        .limit(50)
+        .order("created_at", { ascending: true })
     ]);
 
     const teamMembers = (Array.isArray(membersResp.data) ? membersResp.data : []).map((m) => ({
@@ -97,19 +90,7 @@ export default function SchedulePage() {
 
     setMembers([...teamMembers, ...coaches, ...mentors]);
     setTasks(Array.isArray(tasksResp.data) ? tasksResp.data : []);
-    setAnnouncements(Array.isArray(announcementsResp.data) ? announcementsResp.data : []);
     setLoading(false);
-  }
-
-  async function deleteAnnouncement(id) {
-    if (!confirm("Delete this announcement?")) return;
-    const { error } = await supabase.from("announcements").delete().eq("id", id);
-    if (error) {
-      setStatus({ type: "error", message: `Failed: ${error.message}` });
-    } else {
-      setStatus({ type: "success", message: "Announcement deleted." });
-      setAnnouncements((prev) => prev.filter((a) => a.id !== id));
-    }
   }
 
   const selectedMember = useMemo(
@@ -202,52 +183,6 @@ export default function SchedulePage() {
 
         {!selectedMember ? (
           <section className="landing-section">
-            <div className="announcements-block">
-              <button
-                type="button"
-                className="announcements-toggle"
-                onClick={() => setAnnouncementsOpen((v) => !v)}
-                aria-expanded={announcementsOpen}
-              >
-                <span className="announcements-caret" aria-hidden="true">
-                  {announcementsOpen ? "▾" : "▸"}
-                </span>
-                Announcements
-                {announcements.length > 0 && (
-                  <span className="announcements-count">{announcements.length}</span>
-                )}
-              </button>
-
-              {announcementsOpen && (
-                announcements.length ? (
-                  <ul className="announcement-list">
-                    {announcements.map((a) => (
-                      <li key={a.id} className="announcement-card">
-                        <div className="announcement-head">
-                          <h3>{a.title}</h3>
-                          {isCoach && (
-                            <button
-                              type="button"
-                              className="admin-delete-btn"
-                              onClick={() => deleteAnnouncement(a.id)}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                        {a.body && <p className="announcement-body">{a.body}</p>}
-                        <p className="announcement-meta">
-                          {a.author_name || "Coach"} · {new Date(a.created_at).toLocaleString()}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="announcement-empty">No announcements yet.</p>
-                )
-              )}
-            </div>
-
             <h2>Team Members</h2>
             {members.length ? (
               <div className="activity-grid">

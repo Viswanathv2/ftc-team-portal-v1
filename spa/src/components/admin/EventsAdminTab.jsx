@@ -41,7 +41,7 @@ export default function EventsAdminTab() {
   // ---- Event media state --------------------------------------------------
   const [mediaList, setMediaList] = useState([]);
   const [mediaForm, setMediaForm] = useState(emptyMedia);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   // ---- Achievements state -------------------------------------------------
@@ -74,47 +74,55 @@ export default function EventsAdminTab() {
       setStatus({ type: "error", message: "Title is required" });
       return;
     }
-    if (!file) {
-      setStatus({ type: "error", message: "Please choose a photo or video file" });
+    if (!files.length) {
+      setStatus({ type: "error", message: "Please choose one or more photos/videos" });
       return;
     }
 
     setUploading(true);
     setStatus({ type: "", message: "" });
 
-    const ext = file.name.split(".").pop();
-    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const path = `${mediaForm.event_type}/${safeName}`;
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      const ext = file.name.split(".").pop();
+      const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = `${mediaForm.event_type}/${safeName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { cacheControl: "3600", upsert: false });
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(path, file, { cacheControl: "3600", upsert: false });
 
-    if (uploadError) {
-      setStatus({ type: "error", message: `Upload failed: ${uploadError.message}` });
-      setUploading(false);
-      return;
+      if (uploadError) {
+        setStatus({ type: "error", message: `Upload failed: ${uploadError.message}` });
+        setUploading(false);
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+      const itemTitle = files.length > 1 ? `${mediaForm.title} (${i + 1})` : mediaForm.title;
+
+      const { error: insertError } = await supabase.from("event_media").insert({
+        title: itemTitle,
+        event_type: mediaForm.event_type,
+        event_date: mediaForm.event_date || null,
+        caption: mediaForm.caption,
+        media_url: publicData.publicUrl,
+        media_type: mediaType,
+        storage_path: path
+      });
+
+      if (insertError) {
+        setStatus({ type: "error", message: `Saved file but DB insert failed: ${insertError.message}` });
+        setUploading(false);
+        return;
+      }
     }
 
-    const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    const { error: insertError } = await supabase.from("event_media").insert({
-      title: mediaForm.title,
-      event_type: mediaForm.event_type,
-      event_date: mediaForm.event_date || null,
-      caption: mediaForm.caption,
-      media_url: publicData.publicUrl,
-      media_type: mediaType,
-      storage_path: path
-    });
-
-    if (insertError) {
-      setStatus({ type: "error", message: `Saved file but DB insert failed: ${insertError.message}` });
-    } else {
+    {
       setMediaForm(emptyMedia);
-      setFile(null);
-      setStatus({ type: "success", message: "Media uploaded!" });
+      setFiles([]);
+      setStatus({ type: "success", message: `Uploaded ${files.length} media file(s)!` });
       loadAll();
     }
     setUploading(false);
@@ -291,8 +299,14 @@ export default function EventsAdminTab() {
             <label htmlFor="mediaCaption">Caption</label>
             <textarea id="mediaCaption" value={mediaForm.caption} onChange={(e) => setMediaForm((p) => ({ ...p, caption: e.target.value }))} />
 
-            <label htmlFor="mediaFile">Photo or Video file</label>
-            <input id="mediaFile" type="file" accept="image/*,video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <label htmlFor="mediaFile">Photo / Video files (you can upload more than one)</label>
+            <input
+              id="mediaFile"
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            />
 
             <button className="admin-save-btn" onClick={uploadMedia} disabled={uploading}>
               {uploading ? "Uploading…" : "Upload Media"}

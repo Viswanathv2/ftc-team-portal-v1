@@ -33,25 +33,50 @@ export default function Layout() {
     setUserMenuOpen(false);
   }, [location.pathname]);
 
-  const isManager = Boolean(profile?.isCoach || profile?.isPortalAdmin);
+  const isManager = Boolean(profile?.isAdmin || profile?.isCoach || profile?.isPortalAdmin);
+  const roleDisplay = profile?.isAdmin ? "Admin" : profile?.isCoach ? "Coach" : "Member";
   const avatarFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%23e5e8f0'/%3E%3Ccircle cx='40' cy='32' r='16' fill='%23a8aec4'/%3E%3Cpath d='M 10 74 Q 10 50 40 50 Q 70 50 70 74 Z' fill='%23a8aec4'/%3E%3C/svg%3E";
+  const memberNavItems = [
+    { to: "/dashboard", label: "Overview" },
+    { to: "/schedule", label: "Team Schedule" },
+    { to: "/learning", label: "Learning Resources" },
+    { to: "/checklist", label: "Competition Checklist" },
+    { to: "/parts-inventory", label: "Parts Inventory" },
+    { to: "/scouting", label: "Scouting" },
+    { to: "/expenses", label: "Expenses" }
+  ];
 
   return (
     <>
       <div className="background-art" aria-hidden="true" />
       <nav className="top-nav" aria-label="Main navigation">
         <ul className="top-nav-list">
-          {navItems.map((item) => (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                className={({ isActive }) => (isActive ? "active" : undefined)}
-                end={item.to === "/"}
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
+          <li className="top-nav-brand-item">
+            <NavLink
+              to={user ? "/dashboard" : "/"}
+              className={() => "top-nav-brand"}
+              end
+              aria-label="Architechs home"
+            >
+              <span className="top-nav-brand-title">ARCHITECHS</span>
+              <span className="top-nav-brand-sub">#25795 · FTC</span>
+            </NavLink>
+          </li>
+          {navItems.map((item) => {
+            const targetPath = user && item.to === "/" ? "/dashboard" : item.to;
+            const isRootLike = targetPath === "/" || targetPath === "/dashboard";
+            return (
+              <li key={item.to}>
+                <NavLink
+                  to={targetPath}
+                  className={({ isActive }) => (isActive ? "active" : undefined)}
+                  end={isRootLike}
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            );
+          })}
           {!user ? (
             <li className="account-item">
               <NavLink
@@ -74,7 +99,7 @@ export default function Layout() {
                   <img src={profile?.avatarUrl || avatarFallback} alt="" />
                 </span>
                 <span className="user-menu-name">{profile?.displayName || "Member"}</span>
-                <span className="member-pill">Member</span>
+                <span className="member-pill">{roleDisplay}</span>
               </button>
               {/* <button
                 type="button"
@@ -96,29 +121,6 @@ export default function Layout() {
                   >
                     Change Profile
                   </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => navigate("/schedule")}
-                  >
-                    Team Schedule
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => navigate("/learning")}
-                  >
-                    Learning Resources
-                  </button>
-                  {isManager ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => navigate("/admin")}
-                    >
-                      Admin Activities
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     role="menuitem"
@@ -169,11 +171,51 @@ export default function Layout() {
           </li>
         </ul>
       </nav>
-      <main>
-        <div className="route-fade">
-          <Outlet />
-        </div>
-      </main>
+      {user ? (
+        <main className="logged-layout">
+          <aside className="logged-sidebar" aria-label="Member navigation">
+            <div className="logged-sidebar-title">Member Hub</div>
+            <ul className="logged-sidebar-list">
+              {memberNavItems.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) =>
+                      `logged-sidebar-link${isActive ? " active" : ""}`
+                    }
+                    end={item.to === "/dashboard"}
+                  >
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+              {isManager ? (
+                <li>
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      `logged-sidebar-link${isActive ? " active" : ""}`
+                    }
+                  >
+                    Admin Activities
+                  </NavLink>
+                </li>
+              ) : null}
+            </ul>
+          </aside>
+          <section className="logged-main">
+            <div className="route-fade">
+              <Outlet />
+            </div>
+          </section>
+        </main>
+      ) : (
+        <main>
+          <div className="route-fade">
+            <Outlet />
+          </div>
+        </main>
+      )}
     </>
   );
 }
