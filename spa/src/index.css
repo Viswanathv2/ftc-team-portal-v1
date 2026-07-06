@@ -44,6 +44,9 @@ body {
 
 #root {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: 10px;
 }
 
 .background-art {
@@ -52,21 +55,28 @@ body {
   pointer-events: none;
   z-index: -1;
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(31, 111, 235, 0.06), transparent 26%),
-    radial-gradient(circle at 84% 28%, rgba(45, 165, 138, 0.05), transparent 24%),
-    radial-gradient(circle at 50% 82%, rgba(255, 204, 153, 0.06), transparent 22%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g stroke='%23071228' stroke-opacity='0.10' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M35 100 L45 90 L62 45 L58 35 L70 25 L80 33 L68 45 L52 88 Z'/><path d='M58 35 L70 23'/></g></svg>"),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g stroke='%23071228' stroke-opacity='0.10' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M40 28 L52 18 L68 18 L80 28 L80 44 L68 54 L52 54 L40 44 Z'/><path d='M60 54 L60 98'/><path d='M56 98 L64 98'/></g></svg>"),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g stroke='%23ffffff' stroke-opacity='0.16' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M54 24 L82 36 L82 64 L54 76 L26 64 L26 36 Z'/><circle cx='54' cy='50' r='10'/></g></svg>"),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><g stroke='%23ffffff' stroke-opacity='0.16' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'><path d='M28 28 L40 28 L54 42 L50 46 L40 36 L34 42 L34 52 L28 56 L28 40 Z'/><path d='M54 46 L34 66 L26 58 L46 38'/></g></svg>");
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat, repeat;
-  background-size: auto, auto, auto, 150px 150px, 120px 120px, 130px 130px, 160px 160px;
-  background-position: 12% 18%, 84% 28%, 50% 82%, 0 0, 40px 60px, 80px 20px, 120px 90px;
+    linear-gradient(180deg, rgba(255, 248, 240, 0.80), rgba(255, 248, 240, 0.70)),
+    url("/team-logo.jpg");
+  background-repeat: repeat, repeat;
+  background-size: auto, 320px auto;
+  background-position: 0 0, 0 0;
+  opacity: 0.22;
+}
+
+.dark-theme .background-art {
+  opacity: 0.16;
+  filter: saturate(0.92) brightness(0.78);
+  background-image:
+    linear-gradient(180deg, rgba(6, 9, 18, 0.74), rgba(6, 9, 18, 0.68)),
+    url("/team-logo.jpg");
+  background-repeat: repeat, repeat;
+  background-size: auto, 320px auto;
+  background-position: 0 0, 0 0;
 }
 
 .top-nav {
-  width: min(1200px, calc(100% - 24px));
-  margin: 10px auto 0;
+  width: calc(100% - 24px);
+  margin: 0 auto;
   background: color-mix(in srgb, var(--surface) 80%, transparent);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
@@ -1347,7 +1357,7 @@ body {
 
 
 main {
-  min-height: 100vh;
+  min-height: 0;
   padding: 10px 14px 20px;
 }
 
@@ -1367,7 +1377,7 @@ main {
 }
 
 .landing-page {
-  width: min(1100px, 100%);
+  width: calc(100% - 24px);
   margin: 0 auto;
 }
 
@@ -1396,7 +1406,8 @@ main {
 }
 
 .landing-container {
-  max-width: 920px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   display: grid;
   gap: 18px;
@@ -2235,7 +2246,7 @@ textarea {
 }
 
 .app-shell-page {
-  width: min(1120px, 100%);
+  width: calc(100% - 24px);
   margin: 0 auto;
 }
 
@@ -2316,9 +2327,9 @@ textarea {
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 14px;
-  width: min(1280px, calc(100% - 24px));
+  width: calc(100% - 24px);
   margin: 10px auto 0;
-  min-height: calc(100vh - 96px);
+  min-height: 0;
 }
 
 .logged-sidebar {
@@ -2812,7 +2823,7 @@ a.sponsor-card:hover {
 
 /* Admin Dashboard Styles */
 .admin-dashboard-page {
-  width: min(1120px, 100%);
+  width: calc(100% - 24px);
   margin: 0 auto;
 }
 
@@ -3839,7 +3850,7 @@ a.sponsor-card:hover {
 }
 
 .home-v2-page {
-  width: min(1180px, 100%);
+  width: calc(100% - 24px);
   margin: 0 auto;
 }
 
