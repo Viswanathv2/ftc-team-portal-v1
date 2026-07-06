@@ -11,7 +11,7 @@ const HERO_STATS = [
   { value: "12", label: "Members" },
   { value: "8", label: "FLL Teams" },
   { value: "10K+", label: "Reached" },
-  { value: "2nd Yr", label: "FTC" }
+  { value: "3rd Yr", label: "FTC" }
 ];
 
 export default function HomePage() {
@@ -39,7 +39,7 @@ export default function HomePage() {
           </h1>
           <p className="home-v2-subtitle">Fail Fast, Learn Faster — Engineering the future.</p>
           <p className="home-v2-body">
-            A student-led FIRST Tech Challenge team from Mechanicsburg, PA. 2nd-year FTC
+            A student-led FIRST Tech Challenge team from Mechanicsburg, PA. 3rd-year FTC
             competitors backed by 8 years of FLL experience — building robot AEGIS,
             mentoring FLL teams, and reaching 10,000+ community members through STEM outreach.
             Recognized by Power Women for promoting girls in STEM.

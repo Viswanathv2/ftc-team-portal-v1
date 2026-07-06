@@ -1809,7 +1809,6 @@ main {
 
 .event-media-frame {
   position: relative;
-  aspect-ratio: 4 / 3;
   background: var(--surface-soft);
   overflow: hidden;
 }
@@ -1817,8 +1816,9 @@ main {
 .event-media-frame img,
 .event-media-frame video {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
   display: block;
 }
 
@@ -2003,13 +2003,13 @@ main {
 .team-member-card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   transition: transform 500ms ease;
 }
 
 .team-member-card:hover img {
-  transform: scale(1.05);
+  transform: none;
 }
 
 .member-info {
@@ -3418,12 +3418,15 @@ a.sponsor-card:hover {
 .event-media-frame video {
   display: block;
   width: 100%;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
   transition: transform 0.3s ease;
 }
 
 .event-media-frame:hover img,
 .event-media-frame:hover video {
-  transform: scale(1.05);
+  transform: none;
 }
 
 .event-media-zoom {
@@ -3745,8 +3748,9 @@ a.sponsor-card:hover {
 .home-hero-photo img {
   display: block;
   width: 100%;
-  max-height: 460px;
-  object-fit: cover;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
   transition: transform 0.35s ease;
 }
 
@@ -3762,8 +3766,9 @@ a.sponsor-card:hover {
 .about-team-photo img {
   display: block;
   width: 100%;
-  max-height: 460px;
-  object-fit: cover;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
 }
 
 /* dashboard local link styles removed; global logged sidebar handles nav links */
@@ -4050,8 +4055,8 @@ a.sponsor-card:hover {
 
 .home-v2-design-media {
   position: relative;
-  min-height: 390px;
-  background: rgba(0, 0, 0, 0.2);
+  min-height: 0;
+  background: color-mix(in srgb, var(--surface-soft) 92%, #000 8%);
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
@@ -4083,8 +4088,9 @@ a.sponsor-card:hover {
 .home-v2-design-media img,
 .home-v2-design-media video {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: none;
+  object-fit: contain;
   display: block;
 }
 
@@ -4287,10 +4293,6 @@ a.sponsor-card:hover {
   .home-v2-hero {
     grid-template-columns: 1fr;
     padding: 20px;
-  }
-
-  .home-v2-design-media {
-    min-height: 300px;
   }
 
   .home-v2-stats {
