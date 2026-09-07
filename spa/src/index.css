@@ -1421,6 +1421,236 @@ main {
   box-shadow: var(--shadow);
 }
 
+  /* ---- Shared inventory, expense, and audit records --------------------- */
+  .records-page .landing-container {
+    gap: 18px;
+  }
+
+  .records-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .records-section-heading h2 {
+    margin: 0 0 4px;
+  }
+
+  .records-section-heading p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .records-export-btn {
+    flex: none;
+    margin-top: 0;
+    white-space: nowrap;
+  }
+
+  .records-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+  }
+
+  .records-form label {
+    display: grid;
+    gap: 5px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .records-form input,
+  .records-form textarea,
+  .records-form select {
+    width: 100%;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+
+  .records-form textarea {
+    min-height: 74px;
+    resize: vertical;
+  }
+
+  .records-checkbox {
+    display: flex !important;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 8px !important;
+    align-self: center;
+  }
+
+  .records-checkbox input {
+    width: auto;
+    accent-color: var(--accent);
+  }
+
+  .records-form-actions {
+    display: flex;
+    align-items: center;
+    grid-column: 1 / -1;
+  }
+
+  .records-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .record-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 18px;
+    padding: 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    background: var(--surface-alt);
+  }
+
+  .record-card-main {
+    min-width: 0;
+  }
+
+  .record-card-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .record-card h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+  }
+
+  .record-card p {
+    margin: 7px 0 0;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .record-count,
+  .record-amount {
+    flex: none;
+    color: var(--accent-strong);
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+  }
+
+  .record-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .record-tags span {
+    padding: 4px 8px;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    text-transform: uppercase;
+  }
+
+  .record-note {
+    font-size: 0.82rem;
+  }
+
+  .record-card-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .record-receipt {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--accent-strong);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+
+  .record-audit {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 10px;
+  }
+
+  .record-audit summary {
+    color: var(--muted);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+  }
+
+  .audit-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .audit-entry {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 10px;
+    padding: 9px 10px;
+    border-left: 2px solid var(--accent);
+    background: var(--surface);
+    font-size: 0.78rem;
+  }
+
+  .audit-entry strong {
+    color: var(--accent-strong);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+  }
+
+  .audit-entry span,
+  .audit-entry p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .audit-entry p {
+    grid-column: 1 / -1;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 680px) {
+    .records-section-heading {
+      flex-direction: column;
+    }
+
+    .records-form {
+      grid-template-columns: 1fr;
+    }
+
+    .records-form-actions,
+    .record-audit {
+      grid-column: auto;
+    }
+
+    .record-card {
+      grid-template-columns: 1fr;
+    }
+
+    .record-card-actions {
+      align-items: center;
+    }
+  }
+
 .landing-section h2 {
   margin: 0 0 14px;
   font-family: var(--font-display);
@@ -2688,6 +2918,90 @@ a.sponsor-card:hover {
 .sponsor-form {
   display: grid;
   gap: 8px;
+}
+
+.payment-methods {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 10px 0 0;
+  min-width: 0;
+}
+
+.payment-methods legend {
+  padding: 0 5px;
+}
+
+.payment-method-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.payment-method-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.payment-method-option input {
+  width: auto;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+.payment-instructions {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-soft));
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.payment-instructions p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.payment-handle {
+  color: var(--ink) !important;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.payment-qr {
+  width: min(190px, 100%);
+  aspect-ratio: 1;
+  object-fit: contain;
+  justify-self: center;
+  background: #fff;
+  padding: 8px;
+  border-radius: var(--radius);
+}
+
+.payment-qr-missing,
+.payment-card-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .sponsor-form-title {
@@ -4317,6 +4631,10 @@ a.sponsor-card:hover {
 }
 
 @media (max-width: 560px) {
+  .payment-method-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .top-nav-brand-title {
     font-size: 1.28rem;
   }

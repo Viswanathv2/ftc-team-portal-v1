@@ -15,6 +15,8 @@ import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ProfilePage from "./pages/ProfilePage";
 import LearningResourcesPage from "./pages/LearningResourcesPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import PartsInventoryPage from "./pages/PartsInventoryPage";
+import ExpensesPage from "./pages/ExpensesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -84,7 +86,7 @@ function App() {
               path="parts-inventory"
               element={(
                 <ProtectedRoute>
-                  <ComingSoonPage title="Parts Inventory" subtitle="Inventory tracking is coming soon" />
+                  <PartsInventoryPage />
                 </ProtectedRoute>
               )}
             />
@@ -100,7 +102,7 @@ function App() {
               path="expenses"
               element={(
                 <ProtectedRoute>
-                  <ComingSoonPage title="Expenses" subtitle="Expense tracking is coming soon" />
+                  <ExpensesPage />
                 </ProtectedRoute>
               )}
             />

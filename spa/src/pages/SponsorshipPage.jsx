@@ -10,6 +10,7 @@ import {
   EMAILJS_PUBLIC_KEY,
   emailjsConfigured
 } from "../config/emailjs";
+import { PAYMENT_OPTIONS, STRIPE_FUNCTION_PATH, STRIPE_PAYMENT_LINK } from "../config/payments";
 
 const SPONSOR_EMAIL = "viswanathv2@gmail.com";
 
@@ -27,7 +28,9 @@ export default function SponsorshipPage() {
     phone: "",
     organization: "",
     level: "",
-    message: ""
+    message: "",
+    amount: "",
+    paymentMethod: ""
   });
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function SponsorshipPage() {
     event.preventDefault();
     setError("");
 
+    const amount = Number(form.amount);
     if (!form.name.trim()) {
       setError("Please enter your full name.");
       return;
@@ -82,6 +86,28 @@ export default function SponsorshipPage() {
       setError("Please provide a phone number or an email address so we can reach you.");
       return;
     }
+    if (!Number.isFinite(amount) || amount < 1) {
+      setError("Please enter a sponsorship amount of at least $1.");
+      return;
+    }
+    if (!form.paymentMethod) {
+      setError("Please select a payment method.");
+      return;
+    }
+    if (form.paymentMethod !== "card") {
+      const selectedPayment = PAYMENT_OPTIONS[form.paymentMethod];
+      if (!selectedPayment.handle && !selectedPayment.qrUrl) {
+        setError(`${selectedPayment.label} is not configured yet. Please choose another payment method.`);
+        return;
+      }
+    }
+    if (form.paymentMethod === "card" && !form.email.trim()) {
+      setError("An email address is required for card payment receipts.");
+      return;
+    }
+
+    setSending(true);
+    const paymentReference = crypto.randomUUID();
 
     const { error: insertError } = await supabase.from("interest_submissions").insert({
       kind: "sponsor",
@@ -91,22 +117,55 @@ export default function SponsorshipPage() {
       team_location: form.organization.trim() || null,
       student_count: form.level || null,
       additional_info: form.message.trim() || null,
+      sponsorship_amount: amount.toFixed(2),
+      payment_method: form.paymentMethod,
+      payment_status: form.paymentMethod === "card" ? "checkout_started" : "instructions_shown",
+      payment_reference: paymentReference,
       status: "New",
       created_at: new Date().toISOString()
     });
 
     if (insertError) {
       setError(`Sorry, we couldn't submit your form: ${insertError.message}`);
+      setSending(false);
       return;
     }
 
-    // Submission saved to interest_submissions. Skip email delivery for now.
+    if (form.paymentMethod === "card") {
+      try {
+        const response = await fetch(STRIPE_FUNCTION_PATH, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: Math.round(amount * 100),
+            name: form.name.trim(),
+            email: form.email.trim(),
+            paymentReference
+          })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.url) {
+          throw new Error(result.error || "Unable to start card checkout.");
+        }
+        window.location.assign(result.url);
+        return;
+      } catch (checkoutError) {
+        if (STRIPE_PAYMENT_LINK) {
+          window.location.assign(STRIPE_PAYMENT_LINK);
+          return;
+        }
+        setError(`${checkoutError.message} Please try again or choose a QR payment method.`);
+        setSending(false);
+        return;
+      }
+    }
+
     setSubmitted(true);
     setSending(false);
   }
 
   function resetForm() {
-    setForm({ name: "", email: "", phone: "", organization: "", level: "", message: "" });
+    setForm({ name: "", email: "", phone: "", organization: "", level: "", message: "", amount: "", paymentMethod: "" });
     setSubmitted(false);
     setError("");
   }
@@ -301,12 +360,51 @@ export default function SponsorshipPage() {
                     placeholder="Any questions, ideas, or details about your support..."
                   />
 
+                  <label className="sponsor-label" htmlFor="spAmount">Sponsorship Amount (USD)</label>
+                  <input
+                    id="spAmount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={form.amount}
+                    onChange={(e) => update("amount", e.target.value)}
+                    placeholder="500.00"
+                  />
+
+                  <fieldset className="payment-methods">
+                    <legend className="sponsor-label">Payment Method</legend>
+                    <div className="payment-method-grid">
+                      {Object.entries(PAYMENT_OPTIONS).map(([key, option]) => (
+                        <label className={`payment-method-option${form.paymentMethod === key ? " selected" : ""}`} key={key}>
+                          <input type="radio" name="paymentMethod" value={key} checked={form.paymentMethod === key} onChange={(e) => update("paymentMethod", e.target.value)} />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                      <label className={`payment-method-option${form.paymentMethod === "card" ? " selected" : ""}`}>
+                        <input type="radio" name="paymentMethod" value="card" checked={form.paymentMethod === "card"} onChange={(e) => update("paymentMethod", e.target.value)} />
+                        <span>Credit / debit card</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  {form.paymentMethod && form.paymentMethod !== "card" ? (
+                    <div className="payment-instructions">
+                      <strong>{PAYMENT_OPTIONS[form.paymentMethod].label}</strong>
+                      <p>{PAYMENT_OPTIONS[form.paymentMethod].instructions}</p>
+                      {PAYMENT_OPTIONS[form.paymentMethod].handle ? <p className="payment-handle">{PAYMENT_OPTIONS[form.paymentMethod].handle}</p> : <p className="sponsor-form-error">Payment handle is not configured yet.</p>}
+                      {PAYMENT_OPTIONS[form.paymentMethod].qrUrl ? <img className="payment-qr" src={PAYMENT_OPTIONS[form.paymentMethod].qrUrl} alt={`${PAYMENT_OPTIONS[form.paymentMethod].label} payment QR code`} /> : <p className="payment-qr-missing">Add the payment QR URL to the site configuration to enable scanning.</p>}
+                    </div>
+                  ) : null}
+
+                  {form.paymentMethod === "card" ? <p className="payment-card-note">You will enter card details securely on Stripe&apos;s hosted checkout page. Card numbers never pass through this site.</p> : null}
+
                   <button
                     type="submit"
                     className="admin-save-btn sponsor-submit-btn"
                     disabled={sending}
                   >
-                    {sending ? "Sending\u2026" : "Submit Application \u203a"}
+                    {sending ? (form.paymentMethod === "card" ? "Opening secure checkout\u2026" : "Submitting\u2026") : form.paymentMethod === "card" ? "Continue to secure payment" : "Submit sponsorship"}
                   </button>
                   {error && <p className="sponsor-form-error">{error}</p>}
                   <p className="sponsor-form-note">
